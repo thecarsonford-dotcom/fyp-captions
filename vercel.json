@@ -1,13 +1,20 @@
 {
+  "version": 2,
   "functions": {
-    "api/*.js": {
-      "runtime": "nodejs18.x",
-      "memory": 1024,
-      "maxDuration": 10
+    "api/generate-captions.js": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 15,
+      "memory": 1024
     }
   },
   "routes": [
-    { "src": "/api/generate-captions", "dest": "/api/generate-captions.js" },
-    { "src": "/api/ping", "dest": "/api/ping.js" }
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
   ]
 }
