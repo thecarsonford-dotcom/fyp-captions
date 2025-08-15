@@ -4,8 +4,7 @@
 // Returns: { combined: string, captions: string[], hashtags: string[] }
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
-// Use a fast, inexpensive model tuned for chat
-const MODEL = "gpt-4o-mini";
+const MODEL = "gpt-4o-mini"; // fast + high quality
 
 function cors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -13,7 +12,7 @@ function cors(res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 }
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   cors(res);
 
   if (req.method === "OPTIONS") {
@@ -40,29 +39,37 @@ export default async function handler(req, res) {
       tone = "bold",
       length = "medium",
       platform = "tiktok",
-      count = 6,
+      count = 8,
       hashCount = 8
     } = (req.body || {});
 
-    // keep outputs tight for speed and consistency
-    const N = Math.max(2, Math.min(6, Number(count) || 6));
+    const N = Math.max(2, Math.min(8, Number(count) || 6));
     const HN = Math.max(6, Math.min(12, Number(hashCount) || 8));
 
-    // “FaceTime with a friend” style — no ad-speak, no brand fluff
     const system = `
-You are "Caption Catalyst" for FYP Insights Pro — a senior UGC creator who writes like a best friend on FaceTime.
-Style:
-- Conversational, specific, lightly playful. Zero ad-speak, no corporate words.
-- Use contractions. One clear benefit. One crisp CTA aligned to the goal. Keep it human.
-- If you add an emoji, use max 1–2 total, only where it helps scannability (not decoration).
-Hashtags:
-- Output ~${HN} tags as a single space-separated line, all lowercase, no punctuation, no duplicates.
-- Blend: broad (#fyp, #tiktokshop), mid/category, and niche/SEO tied to product+audience.
-Return JSON ONLY in this exact shape:
+You are "Caption Catalyst" for FYP Insights Pro — an expert TikTok creator.
+
+VOICE RULES:
+- Never speak as the brand. Do NOT use "our", "we", or imply you made/sell the product unless explicitly stated.
+- Speak as a real person recommending something they like, have used, or observed.
+- Two allowed styles:
+    1) Personal-use framing: "I've been using this serum..." / "I love how this one..."
+    2) Observational framing: "This serum helps with..." / "It’s perfect for..."
+- Avoid exaggerated ad claims or buzzwords. Be genuine, natural, and relatable — like talking to a best friend on FaceTime.
+- Start with a hook that’s scroll-stopping, but human.
+- Mention 1 tangible benefit and/or address 1 pain point naturally.
+- Keep captions human, specific, and non-salesy.
+
+HASHTAGS:
+- One line, lowercase, space-separated, ${HN} total.
+- Mix broad (#fyp, #tiktokshop), mid-tier category, and niche/SEO tags for product+audience.
+
+OUTPUT FORMAT:
+JSON ONLY in this exact shape:
 {
-  "captions": ["..."],             // ${N} alternatives, NO hashtags inside
+  "captions": ["..."],             // ${N} alternatives, no hashtags
   "hashtags": ["#a","#b", "..."],  // ~${HN} tags
-  "combined": "caption\\n#tag1 #tag2 ..." // a single paste-ready best pick
+  "combined": "caption\\n#tag1 #tag2 ..."
 }
 `.trim();
 
@@ -74,15 +81,8 @@ pains: ${(Array.isArray(pains)?pains:[]).join("; ")}
 tone: ${tone} | length: ${length} | platform: ${platform}
 alts: ${N} | hashtags: ${HN}
 
-Constraints:
-- Plain language. No buzzwords like “transform”, “ultimate”, “revolutionary”.
-- Lead with the situation or pain in 5–8 words; then the benefit. CTA last.
-- Captions should read like a natural text you’d send a friend, not an ad.
+Make it conversational, authentic, and viral-worthy. Avoid corporate or brand tone.
 `.trim();
-
-    // 12s hard timeout for snappy UX
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), 12_000);
 
     const resp = await fetch(OPENAI_URL, {
       method: "POST",
@@ -92,23 +92,18 @@ Constraints:
       },
       body: JSON.stringify({
         model: MODEL,
-        temperature: 0.7,         // a bit lower for consistency
+        temperature: 0.9,
         top_p: 0.9,
-        presence_penalty: 0.2,
-        frequency_penalty: 0.2,
-        max_tokens: 420,          // tighter to reduce latency
+        presence_penalty: 0.3,
+        frequency_penalty: 0.25,
+        max_tokens: 550,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: system },
           { role: "user", content: user }
         ]
-      }),
-      signal: ac.signal
-    }).catch((e) => {
-      clearTimeout(t);
-      throw e;
+      })
     });
-    clearTimeout(t);
 
     if (!resp.ok) {
       const detail = await resp.text().catch(() => "");
@@ -118,9 +113,12 @@ Constraints:
 
     const data = await resp.json();
     const content = data?.choices?.[0]?.message?.content || "{}";
-
-    let parsed = {};
-    try { parsed = JSON.parse(content); } catch { parsed = {}; }
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      parsed = {};
+    }
 
     let captions = Array.isArray(parsed.captions) ? parsed.captions.filter(Boolean) : [];
     if (captions.length > N) captions = captions.slice(0, N);
@@ -129,14 +127,19 @@ Constraints:
     if (hashtags.length > HN) hashtags = hashtags.slice(0, HN);
 
     let combined = typeof parsed.combined === "string" ? parsed.combined.trim() : "";
+
     if (!combined && captions.length) {
       const line = hashtags.join(" ").trim();
       combined = line ? `${captions[0]}\n${line}` : captions[0];
     }
 
-    res.status(200).json({ combined: combined || "", captions, hashtags });
+    res.status(200).json({
+      combined: combined || "",
+      captions,
+      hashtags
+    });
+
   } catch (err) {
-    const msg = (err?.name === 'AbortError') ? 'Upstream timeout' : (err?.message || String(err));
-    res.status(500).json({ error: "Server error", detail: msg });
+    res.status(500).json({ error: "Server error", detail: String(err?.message || err) });
   }
-}
+};
