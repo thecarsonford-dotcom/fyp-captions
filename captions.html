@@ -9,7 +9,7 @@
   <meta name="description" content="AI-powered TikTok caption and hashtag generator. Broad + niche strategy, tuned for FYP.">
 
   <style>
-    /* ===== Theme (matches index.html) ===== */
+    /* ===== Theme (matches your index.html) ===== */
     :root{
       --bg:#0b0f14; --surface:rgba(21,27,33,.75); --card:#0f141b; --border:#1e2a35;
       --text:#e8eef6; --muted:#9fb0c2; --accent:#6fe3ff; --accent2:#32c8f0;
@@ -105,6 +105,9 @@
       background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.00));display:none}
 
     .small{font-size:12px}
+    .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:60;display:none;
+      padding:10px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:13px}
+    .toast.show{display:block}
   </style>
 </head>
 <body>
@@ -142,7 +145,8 @@
     <div class="subtle">AI-tuned captions & hashtag strategy for TikTok Shop.</div>
   </div>
 
-  <div id="status" class="status">Ready.</div>
+  <div id="status" class="status" aria-live="polite">Ready.</div>
+  <div id="toast" class="toast" role="status"></div>
 
   <main class="wrap panel">
     <!-- LEFT: Controls -->
@@ -246,10 +250,10 @@
           <div class="chip" data-key="ai" data-on="true">AI mode (server)</div>
         </div>
         <div class="row" style="justify-content:flex-end">
-          <button id="generate" class="btn accent">Generate</button>
-          <button id="shuffle" class="btn">Shuffle</button>
-          <button id="copyAll" class="btn">Copy all</button>
-          <button id="exportCsv" class="btn">Export CSV</button>
+          <button id="generate" class="btn accent" type="button">Generate</button>
+          <button id="shuffle" class="btn" type="button">Shuffle</button>
+          <button id="copyAll" class="btn" type="button">Copy all</button>
+          <button id="exportCsv" class="btn" type="button">Export CSV</button>
         </div>
       </div>
       <div class="note small">AI mode uses <code>/api/generate-captions</code>. If it fails, we auto-fallback to smart local generation.</div>
@@ -258,7 +262,7 @@
     <!-- RIGHT: Results -->
     <section class="cols">
       <div class="card pad">
-        <div id="list" class="hlist" aria-live="polite"></div>
+        <div id="list" class="hlist"></div>
       </div>
 
       <aside class="side">
@@ -271,7 +275,7 @@
           <div class="muted small">Best practices baked in:</div>
           <ul class="small" style="margin:6px 0 0 16px;line-height:1.55">
             <li>Hook first, benefit specificity, then CTA.</li>
-            <li>Emoji used as scannability, not glitter.</li>
+            <li>Emoji used for scannability, not glitter.</li>
             <li>Hashtags: broad + mid + niche + (optional) branded.</li>
             <li>Auto-dedupe & seed for daily variety.</li>
           </ul>
@@ -285,10 +289,13 @@
   </footer>
 
   <script>
+  // Wrap everything to avoid partial parse errors from earlier edits
+  (function(){
     // ====================== CONFIG ======================
     const THEME_KEY = 'theme';
     const STATE_KEY = 'CAPTION_CATALYST_STATE_V1';
-    const API_URL = '/api/generate-captions'; // <-- Node function (works with your current server)
+    // API route (Node runtime). Switch to '/api/generate-captions-edge' later if you prefer Edge.
+    const API_URL = '/api/generate-captions';
 
     // =================== THEME ===================
     function setTheme(mode){
@@ -314,7 +321,7 @@
       function close(){ tools.classList.remove('open'); toolsBtn.setAttribute('aria-expanded','false'); }
       function open(){ tools.classList.add('open'); toolsBtn.setAttribute('aria-expanded','true'); }
       toolsBtn.addEventListener('click', (e)=>{ e.stopPropagation(); (tools.classList.contains('open')?close():open()); });
-      document.addEventListener('click', (e)=>{ if (!els.tools.contains(e.target)) close(); });
+      document.addEventListener('click', (e)=>{ if (!tools.contains(e.target)) close(); });
       document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') close(); });
     })();
 
@@ -331,35 +338,51 @@
 
     // =================== DEFAULTS BY CATEGORY ===================
     const defaultsByCategory = {
-      beauty:{ pains:['wasting money on serums','red irritated skin'], benefits:['glass-skin in 7 days','barrier-safe glow'], seed:['skincare','serum'] },
-      skincare:{ pains:['acne flares','10-step routines'], benefits:['derm-approved minimal routine'], seed:['skin','glow'] },
-      kitchen:{ pains:['spending forever prepping','slippery cutting board'], benefits:['5-min meal prep','one tool replaces 7'], seed:['kitchen','mealprep','cook'] },
-      cleaning:{ pains:['streaky mirrors','scrub for 30 minutes'], benefits:['spotless in one pass','zero streaks'], seed:['cleaning','home'] },
-      gadgets:{ pains:['dead battery by noon','cables everywhere'], benefits:['all-day battery','one cable'], seed:['tech','gadgets'] },
-      home:{ pains:['cluttered counters','no storage'], benefits:['renter-friendly storage'], seed:['home','organize'] },
-      fitness:{ pains:['burnout','plateaus'], benefits:['10-min routines','visible progress'], seed:['fitness','workout'] },
-      fashion:{ pains:['fits that don’t flatter'], benefits:['tailored look under $50'], seed:['fashion','outfit'] },
-      pets:{ pains:['fur on everything'], benefits:['hair-free couch'], seed:['pets','dog'] },
+      beauty:{ pains:['wasting money on serums','red irritated skin'], benefits:['glass-skin in 7 days','barrier-safe glow'] },
+      skincare:{ pains:['acne flares','10-step routines'], benefits:['derm-approved minimal routine'] },
+      kitchen:{ pains:['spending forever prepping','slippery cutting board'], benefits:['5-min meal prep','one tool replaces 7'] },
+      cleaning:{ pains:['streaky mirrors','scrub for 30 minutes'], benefits:['spotless in one pass','zero streaks'] },
+      gadgets:{ pains:['dead battery by noon','cables everywhere'], benefits:['all-day battery','one cable'] },
+      home:{ pains:['cluttered counters','no storage'], benefits:['renter-friendly storage'] },
+      fitness:{ pains:['burnout','plateaus'], benefits:['10-min routines','visible progress'] },
+      fashion:{ pains:['fits that don’t flatter'], benefits:['tailored look under $50'] },
+      pets:{ pains:['fur on everything'], benefits:['hair-free couch'] },
     };
 
-    // =================== TEMPLATE LIB (local fallback) ===================
+    // =================== TEMPLATES / LIBS ===================
     const CAP_TPL = [
-      "Real talk: {benefit} without the {pain}. {product} just did it.",
-      "Low effort, high win: {product} → {benefit}.",
-      "Unpopular opinion: skip {pain}. Try {product} and get {benefit}.",
-      "Insider tip: If {pain} keeps happening, {product} is the shortcut to {benefit}.",
-      "Backed by receipts: {product} = {benefit}. Bye, {pain}.",
+      "{toneLead}{benefit} without the {pain}. {product} just fixed it.",
+      "{toneLead}The fastest path to {benefit}? Start with {product}.",
+      "{toneLead}{audience}: if {pain} is your reality, this is your shortcut.",
+      "{toneLead}Proof over hype — watch how {product} delivers {benefit}.",
+      "{toneLead}I stopped {pain}. {product} in, {benefit} out.",
+      "{toneLead}New rule: one change → {benefit}. (It’s {product}.)",
+      "{toneLead}Real talk: {benefit} is easy when you remove {pain}.",
+      "{toneLead}{goalTitle} mode: do this first. {product} → {benefit}.",
+      "{toneLead}Before vs after with {product}. Unfiltered {benefit}.",
+      "{toneLead}If you want {benefit}, start here → {product}."
     ];
-    const CTAS = {
-      clicks: ["Tap for the receipts →","Want the breakdown? Tap through.","Details inside — tap."],
-      "add to cart": ["Grab it while it’s in stock →","Add to cart before price jumps.","Don’t wait — check it now."],
-      "brand awareness": ["Follow for real tests.","Save this for later.","Share with a friend who needs this."],
-      comments: ["Tried this? Tell me your results.","What should I test next? Drop it.","Comment ‘guide’ for steps."],
-      follows: ["More like this daily — follow.","New tests weekly — hit follow.","Follow for quick wins."]
+    const TONE_LEADS = {
+      bold:"Hot take: ",
+      friendly:"Real talk: ",
+      luxury:"Insider tip: ",
+      scientific:"Backed by data: ",
+      contrarian:"Unpopular opinion: ",
+      playful:"Low effort, high win: ",
     };
-    const EMOJI_PACK = { none:[], smart:["⚡️","✅","🧪","✨","🎯","⏱️","💡"], high:["🔥","💥","✨","😍","🤯","⚡️","🚀"] };
-    const BROAD_SEEDS = ["tiktokmademebuyit","viral","tiktokshop"];
-    const MID_SEEDS   = ["review","beforeafter","asmr"];
+    const CTAS = {
+      clicks: ["Tap to see how it works →", "Link in bio — details inside.", "Want the breakdown? Tap through."],
+      "add to cart": ["Grab it while it’s in stock →", "Add to cart before price jumps.", "Don’t wait — check it out now."],
+      "brand awareness": ["Follow for more real tests.", "Save this for later.", "Share with a friend who needs this."],
+      comments: ["Comment ‘guide’ and I’ll DM the steps.", "What should I test next? Drop it.", "Tried this? Tell me your results."],
+      follows: ["Follow for daily shortcuts.", "More like this every day — follow.", "New tests weekly — hit follow."]
+    };
+    const EMOJI_PACK = {
+      none: [], smart: ["⚡️","✅","🧪","🔥","🎯","⏱️","💡","🔒","📦","✨"],
+      high: ["🔥","💥","✨","😍","🤯","⚡️","🚀","💡","🧪","🛒","🎯"]
+    };
+    const BROAD_SEEDS = ["tiktokmademebuyit","fyp","viral","tiktokshop","musthave"];
+    const MID_SEEDS   = ["lifehack","unboxing","review","beforeafter","asmr"];
     const CAT_SEEDS   = {
       beauty:["skincare","glowup","acnetips","skinbarrier"],
       skincare:["skincare","barrierrepair","dermtips"],
@@ -396,7 +419,7 @@
       kHash:    $('#kHash'),
       kVar:     $('#kVar'),
       status:   $('#status'),
-      tools:    document.getElementById('tools')
+      toast:    $('#toast'),
     };
 
     function readSwitch(key){ return els.switches.querySelector(`.chip[data-key="${key}"]`)?.dataset.on === 'true'; }
@@ -450,9 +473,33 @@
     function slugifyHash(s){
       return strip(s.toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,''));
     }
+    function toast(msg){
+      els.toast.textContent = msg;
+      els.toast.classList.add('show');
+      clearTimeout(toast._t);
+      toast._t = setTimeout(()=> els.toast.classList.remove('show'), 1800);
+    }
+    function setStatus(s, show=true){
+      els.status.textContent = s;
+      els.status.style.display = show ? 'block' : 'none';
+    }
 
-    // =================== LOCAL FALLBACK (if API fails) ===================
-    function makeHashtags({product, category, audience, benefitsPool, painsPool, strategy, hashCount}){
+    // =================== API CALL ===================
+    async function fetchAI(payload){
+      const res = await fetch(API_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok){
+        const txt = await res.text().catch(()=>res.statusText);
+        throw new Error(`API ${res.status}: ${txt}`);
+      }
+      return res.json(); // { combined, captions[], hashtags[] }
+    }
+
+    // =================== LOCAL FALLBACK ===================
+    function makeHashtags({product, category, audience, benefitsPool, painsPool, strategy, hashCount, r=Math.random}){
       const n = parseInt(hashCount,10) || 8;
       const broad = [...BROAD_SEEDS];
       const mid   = [...MID_SEEDS];
@@ -528,7 +575,10 @@
         let cap = tpl
           .replaceAll('{product}', product || 'this')
           .replaceAll('{benefit}', benefit)
-          .replaceAll('{pain}', pain);
+          .replaceAll('{pain}', pain)
+          .replaceAll('{audience}', audience || 'smart buyers')
+          .replaceAll('{goalTitle}', goal.replace(/\b\w/g,s=>s.toUpperCase()))
+          .replaceAll('{toneLead}', TONE_LEADS[tone] || '');
 
         cap += (cap.endsWith('.')?'':'') + ' ' + ctas[Math.floor(r()*ctas.length)];
         cap = injectEmoji(cap, pack, emoji, r);
@@ -547,49 +597,50 @@
     // =================== RENDER ===================
     function render(list){
       const host = els.list; host.innerHTML = '';
+      if (!list || !list.length){
+        host.innerHTML = `<div class="muted">No results. Try different inputs.</div>`;
+        els.kVar.textContent = '0'; els.kLen.textContent = '—'; els.kHash.textContent = '—';
+        return;
+      }
       list.forEach((it, i)=>{
         const box = document.createElement('div');
         box.className = 'cap';
         const htags = (it.hashtags||[]).join(' ');
+        const capText = it.caption || it.combined || '';
         box.innerHTML = `
           <div class="meta">
             <div class="tag">Option ${i+1}</div>
-            <div class="small muted">${(it.caption||'').length} chars • ${(it.hashtags||[]).length} tags</div>
+            <div class="small muted">${capText.length} chars • ${(it.hashtags||[]).length} tags</div>
           </div>
-          <div class="body">${escapeHtml(it.caption||'')}</div>
-          <div class="body" style="margin-top:6px;color:var(--muted)">${escapeHtml(htags)}</div>
+          <div class="body">${escapeHtml(capText)}</div>
+          ${htags ? `<div class="body" style="margin-top:6px;color:var(--muted)">${escapeHtml(htags)}</div>` : ''}
           <div class="actions">
-            <button class="copy" data-idx="${i}" data-type="cap">Copy caption</button>
-            <button class="copy" data-idx="${i}" data-type="tags">Copy hashtags</button>
-            <button class="copy" data-idx="${i}" data-type="both">Copy both</button>
+            <button class="copy" data-payload="${escapeAttr(capText)}">Copy caption</button>
+            ${htags ? `<button class="copy" data-payload="${escapeAttr(htags)}">Copy hashtags</button>` : ''}
+            ${htags ? `<button class="copy" data-payload="${escapeAttr(capText + '\n' + htags)}">Copy both</button>` : ''}
           </div>`;
         host.appendChild(box);
       });
+      const capsOnly = list.map(x => x.caption || x.combined || '');
+      const avgLen = Math.round(capsOnly.reduce((a,c)=>a+(c?.length||0),0) / Math.max(1,capsOnly.length));
       els.kVar.textContent = String(list.length);
-      const avgLen = Math.round(list.reduce((a,c)=>a+(c.caption?.length||0),0) / Math.max(1,list.length));
       els.kLen.textContent = isFinite(avgLen)? `${avgLen} avg` : '—';
       els.kHash.textContent = list[0]?.hashtags?.length || '—';
 
       host.querySelectorAll('.copy').forEach(btn=>{
         btn.addEventListener('click', ()=>{
-          const idx = parseInt(btn.dataset.idx,10);
-          const type = btn.dataset.type;
-          const it = list[idx];
-          const tagsLine = (it.hashtags||[]).join(' ');
-          let payload = it.caption || '';
-          if (type==='tags') payload = tagsLine;
-          if (type==='both') payload = (it.caption||'') + '\n' + tagsLine;
-          copy(payload);
-          flashStatus(`Copied ${type==='both' ? 'caption + hashtags' : type} ✅`);
+          const payload = btn.getAttribute('data-payload') || '';
+          navigator.clipboard.writeText(decodeAttr(payload)).then(()=> toast('Copied ✅'));
         });
       });
     }
 
     function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-    function flashStatus(msg){ els.status.textContent = msg; els.status.style.display='block'; clearTimeout(flashStatus._t); flashStatus._t = setTimeout(()=> els.status.style.display='none', 1500); }
+    function escapeAttr(s){ return (s||'').replace(/"/g,'&quot;'); }
+    function decodeAttr(s){ const d=document.createElement('div'); d.innerHTML = s; return d.textContent || ''; }
 
     function exportCsv(list){
-      const rows = list.map((it,i)=> ({idx:i+1, caption:it.caption, hashtags:(it.hashtags||[]).join(' ')}));
+      const rows = list.map((it,i)=> ({idx:i+1, caption:(it.caption||it.combined||''), hashtags:(it.hashtags||[]).join(' ')}));
       const esc = s=> `"${String(s).replace(/"/g,'""')}"`;
       const csv = 'idx,caption,hashtags\n' + rows.map(r=> [r.idx, esc(r.caption), esc(r.hashtags)].join(',')).join('\n');
       const blob = new Blob([csv], {type:'text/csv'});
@@ -597,20 +648,6 @@
       a.href = URL.createObjectURL(blob);
       a.download = `captions_${todaySeed()}.csv`;
       a.click(); URL.revokeObjectURL(a.href);
-    }
-
-    // =================== API CALL ===================
-    async function fetchAI(payload){
-      const res = await fetch(API_URL, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok){
-        const txt = await res.text().catch(()=>res.statusText);
-        throw new Error(`API ${res.status}: ${txt}`);
-      }
-      return res.json(); // { combined, captions[], hashtags[] }
     }
 
     // =================== CORE FLOW ===================
@@ -623,8 +660,12 @@
       const benefits = splitSemi(els.benefits.value);
       return {
         product, category, audience, goal, pains, benefits,
-        tone: els.tone.value, length: els.length.value, emoji: els.emoji.value,
-        strategy: els.strategy.value, hashCount: els.hashCount.value, count: parseInt(els.count.value,10)||12
+        tone: els.tone.value || 'bold',
+        length: els.length.value || 'medium',
+        emoji: els.emoji.value || 'smart',
+        strategy: els.strategy.value || 'balanced',
+        hashCount: els.hashCount.value || '8',
+        count: parseInt(els.count.value,10)||12
       };
     }
 
@@ -638,71 +679,72 @@
         length: vars.length,
         platform: 'TikTok',
         count: Math.min(8, Math.max(2, vars.count || 6)),
-        hashCount: Math.min(12, Math.max(6, parseInt(vars.hashCount,10)||8))
+        hashCount: Math.min(12, Math.max(6, parseInt(vars.hashCount,10) || 8))
       };
     }
 
     async function build(){
       const vars = readVars();
-      els.status.textContent = 'Thinking…';
-      els.status.style.display = 'block';
+      setStatus('Thinking…');
 
-      // Try server AI first
-      try{
-        const data = await fetchAI(toApiPayload(vars));
-        // Prefer the paste-ready "combined" line; also show 2 alternates if present
-        const combinedLine = data.combined || '';
-        const tagsList = Array.isArray(data.hashtags) ? data.hashtags.map(h => h.startsWith('#') ? h : '#'+h) : [];
-        const altCaps = Array.isArray(data.captions) ? data.captions.slice(0,2) : [];
-        const list = [];
+      let usedAI = false;
+      if (readSwitch('ai')) {
+        try{
+          const data = await fetchAI(toApiPayload(vars));
+          // Prefer combined paste-ready; also provide 2 alternates if present
+          const combinedLine = (data.combined || '').trim();
+          const tagsList = Array.isArray(data.hashtags) ? data.hashtags.map(h => h.startsWith('#') ? h : '#'+h) : [];
+          const altCaps = Array.isArray(data.captions) ? data.captions.slice(0,2) : [];
+          const list = [];
 
-        if (combinedLine){
-          list.push({ caption: combinedLine, hashtags: [] });
-        }
-        if (altCaps.length){
-          altCaps.forEach(c => list.push({ caption: c, hashtags: tagsList }));
-        }
-        if (!list.length){
-          // fallback to local if API returned empty
-          const local = localGenerate({...vars, count: 6});
-          render(local);
-          flashStatus('AI empty — used local ✅');
-        } else {
+          if (combinedLine) list.push({ combined: combinedLine, caption: combinedLine, hashtags: [] });
+          if (altCaps.length){
+            const tagLine = tagsList.join(' ');
+            altCaps.forEach(c => list.push({ caption: c, hashtags: tagsList, combined: '' }));
+          }
+          if (!list.length) throw new Error('Empty AI response');
           render(list);
-          flashStatus('Generated ✅');
+          setStatus('Generated ✅');
+          usedAI = true;
+          return;
+        }catch(e){
+          console.warn('AI error, falling back:', e);
+          toast('AI unavailable — using local generator');
         }
-        return;
-      }catch(e){
-        console.warn('AI error -> local fallback:', e.message);
       }
 
       // Fallback: local generator
       const local = localGenerate({...vars});
       render(local);
-      flashStatus('AI unavailable — local fallback ✅');
+      setStatus(usedAI ? 'Fallback used' : 'Generated ✅');
     }
 
     // =================== EVENTS ===================
-    els.generate.addEventListener('click', build);
-    els.shuffle.addEventListener('click', build);
-    els.copyAll.addEventListener('click', async ()=>{
-      const boxes = Array.from(document.querySelectorAll('.cap'));
-      const text = boxes.map(b=>{
-        const t = b.querySelector('.body')?.textContent || '';
-        const h = b.querySelectorAll('.body')[1]?.textContent || '';
-        return (t + (h?('\n'+h):'')).trim();
-      }).join('\n\n');
-      await copy(text);
-      flashStatus(`Copied ${boxes.length} variant(s) ✅`);
-    });
-    els.exportCsv.addEventListener('click', async ()=>{
-      const current = Array.from(document.querySelectorAll('.cap')).map(el=>{
-        const cap = el.querySelector('.body')?.textContent || '';
-        const h   = el.querySelectorAll('.body')[1]?.textContent || '';
-        return {caption:cap, hashtags:h.trim().split(/\s+/).filter(Boolean)};
+    function bindEvents(){
+      els.generate?.addEventListener('click', build);
+      els.shuffle?.addEventListener('click', build);
+      els.copyAll?.addEventListener('click', async ()=>{
+        const boxes = Array.from(document.querySelectorAll('.cap'));
+        const text = boxes.map(b=>{
+          const bodies = b.querySelectorAll('.body');
+          const cap = bodies[0]?.textContent || '';
+          const h   = bodies[1]?.textContent || '';
+          return h ? (cap + '\n' + h).trim() : cap.trim();
+        }).join('\n\n');
+        await copy(text);
+        toast(`Copied ${boxes.length} item(s) ✅`);
       });
-      exportCsv(current);
-    });
+      els.exportCsv?.addEventListener('click', async ()=>{
+        const current = Array.from(document.querySelectorAll('.cap')).map(el=>{
+          const bodies = el.querySelectorAll('.body');
+          const cap = bodies[0]?.textContent || '';
+          const h   = bodies[1]?.textContent || '';
+          return {caption:cap, hashtags:h.trim().split(/\s+/).filter(Boolean)};
+        });
+        exportCsv(current);
+      });
+    }
+    bindEvents();
 
     // First render with sensible defaults
     (async function init(){
@@ -711,9 +753,11 @@
       if (!els.audience.value) els.audience.value = 'busy parents';
       if (!els.pains.value) els.pains.value = 'spending forever chopping; cluttered counters';
       if (!els.benefits.value) els.benefits.value = '5-minute meal prep; one tool replaces 7';
-      document.getElementById('y').textContent = new Date().getFullYear();
+      saveState();
       await build();
+      document.getElementById('y').textContent = new Date().getFullYear();
     })();
+  })();
   </script>
 </body>
 </html>
