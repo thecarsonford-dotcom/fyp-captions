@@ -243,7 +243,7 @@
           <div class="chip" data-key="hooks" data-on="true">Hook-led captioning</div>
           <div class="chip" data-key="daily" data-on="true">Daily seed (variety)</div>
           <div class="chip" data-key="dedupe" data-on="true">Dedupe similar</div>
-          <div class="chip" data-key="ai" data-on="true">AI mode (server)</div>
+          <div class="chip" data-key="ai" data-on="true">AI mode (server)</div><!-- turned ON by default -->
         </div>
         <div class="row" style="justify-content:flex-end">
           <button id="generate" class="btn accent">Generate</button>
@@ -252,7 +252,7 @@
           <button id="exportCsv" class="btn">Export CSV</button>
         </div>
       </div>
-      <div class="note small">AI mode uses <code>/api/generate-captions-edge</code>. If it fails, we auto-fallback to local generation.</div>
+      <div class="note small">AI mode uses <code>/api/generate-captions-edge</code>. If it fails, we auto-fallback to smart local generation.</div>
     </section>
 
     <!-- RIGHT: Results -->
@@ -288,8 +288,7 @@
     // ====================== CONFIG ======================
     const THEME_KEY = 'theme';
     const STATE_KEY = 'CAPTION_CATALYST_STATE_V1';
-    // Your Edge route for speed
-    const API_URL = '/api/generate-captions-edge';
+    const API_URL = '/api/generate-captions-edge'; // <-- uses Edge function
 
     // =================== THEME (same as index) ===================
     function setTheme(mode){
@@ -343,22 +342,39 @@
       pets:{ pains:['fur on everything'], benefits:['hair-free couch'], seed:['pets','dog'] },
     };
 
-    // =================== TEMPLATE LIB (caption shells, local fallback) ===================
+    // =================== TEMPLATE LIB (caption shells) ===================
     const CAP_TPL = [
-      "Real talk: {benefit} without the {pain}. {product} just did it.",
-      "Low effort, high win: {product} → {benefit}.",
-      "Unpopular opinion: skip {pain}. Try {product} and get {benefit}.",
-      "Insider tip: If {pain} keeps happening, {product} is the shortcut to {benefit}.",
-      "Backed by receipts: {product} = {benefit}. Bye, {pain}."
+      "{toneLead}{benefit} without the {pain}. {product} just fixed it.",
+      "{toneLead}The fastest path to {benefit}? Start with {product}.",
+      "{toneLead}{audience}: if {pain} is your reality, this is your shortcut.",
+      "{toneLead}Proof over hype — watch how {product} delivers {benefit}.",
+      "{toneLead}I stopped {pain}. {product} in, {benefit} out.",
+      "{toneLead}New rule: one change → {benefit}. (It’s {product}.)",
+      "{toneLead}Real talk: {benefit} is easy when you remove {pain}.",
+      "{toneLead}{goalTitle} mode: do this first. {product} → {benefit}.",
+      "{toneLead}Before vs after with {product}. Unfiltered {benefit}.",
+      "{toneLead}If you want {benefit}, start here → {product}."
     ];
-    const CTAS = {
-      clicks: ["Tap for the receipts →","Want the breakdown? Tap through.","Details inside — tap."],
-      "add to cart": ["Grab it while it’s in stock →","Add to cart before price jumps.","Don’t wait — check it now."],
-      "brand awareness": ["Follow for real tests.","Save this for later.","Share with a friend who needs this."],
-      comments: ["Tried this? Tell me your results.","What should I test next? Drop it.","Comment ‘guide’ for steps."],
-      follows: ["More like this daily — follow.","New tests weekly — hit follow.","Follow for quick wins."]
+    const TONE_LEADS = {
+      bold:"Hot take: ",
+      friendly:"Real talk: ",
+      luxury:"Insider tip: ",
+      scientific:"Backed by data: ",
+      contrarian:"Unpopular opinion: ",
+      playful:"Low effort, high win: ",
     };
-    const EMOJI_PACK = { none:[], smart:["⚡️","✅","🧪","✨","🎯","⏱️","💡"], high:["🔥","💥","✨","😍","🤯","⚡️","🚀"] };
+    const CTAS = {
+      clicks: ["Tap to see how it works →", "Link in bio — details inside.", "Want the breakdown? Tap through."],
+      "add to cart": ["Grab it while it’s in stock →", "Add to cart before price jumps.", "Don’t wait — check it out now."],
+      "brand awareness": ["Follow for more real tests.", "Save this for later.", "Share with a friend who needs this."],
+      comments: ["Comment ‘guide’ and I’ll DM the steps.", "What should I test next? Drop it.", "Tried this? Tell me your results."],
+      follows: ["Follow for daily shortcuts.", "More like this every day — follow.", "New tests weekly — hit follow."]
+    };
+    const EMOJI_PACK = {
+      none: [],
+      smart: ["⚡️","✅","🧪","🔥","🎯","⏱️","💡","🔒","📦","✨"],
+      high: ["🔥","💥","✨","😍","🤯","⚡️","🚀","💡","🧪","🛒","🎯"]
+    };
     const BROAD_SEEDS = ["tiktokmademebuyit","fyp","viral","tiktokshop","musthave"];
     const MID_SEEDS   = ["lifehack","unboxing","review","beforeafter","asmr"];
     const CAT_SEEDS   = {
@@ -451,100 +467,7 @@
       return strip(s.toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,''));
     }
 
-    // =================== LOCAL FALLBACK (if API fails) ===================
-    function makeHashtags({product, category, audience, benefitsPool, painsPool, strategy, hashCount, r}){
-      const n = parseInt(hashCount,10) || 8;
-      const broad = [...BROAD_SEEDS];
-      const mid   = [...MID_SEEDS];
-      const cset  = CAT_SEEDS[category] || [];
-      const terms = []
-        .concat((product||'').split(/\W+/))
-        .concat((audience||'').split(/\W+/))
-        .concat(benefitsPool||[])
-        .concat(painsPool||[])
-        .map(s=> slugifyHash(s))
-        .filter(x=> x && x.length>2 && x.length<28);
-
-      const niche = new Set();
-      terms.forEach(t=>{
-        niche.add(t);
-        if (Math.random() < 0.35){ niche.add(t + (Math.random()<0.5?'tips':'hack')); }
-      });
-      function take(arr, k){ const out=[]; const pool=[...arr]; for (let i=0;i<k && pool.length;i++){ out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]); } return out; }
-
-      let picks = [];
-      if (strategy==='niche-heavy'){
-        picks = take([...niche], Math.ceil(n*0.6))
-          .concat(take(cset, Math.ceil(n*0.2)))
-          .concat(take(mid, Math.ceil(n*0.1)))
-          .concat(take(broad, Math.ceil(n*0.1)));
-      } else if (strategy==='broad-heavy'){
-        picks = take(broad, Math.ceil(n*0.4))
-          .concat(take(mid, Math.ceil(n*0.25)))
-          .concat(take(cset, Math.ceil(n*0.2)))
-          .concat(take([...niche], Math.ceil(n*0.15)));
-      } else if (strategy==='branded'){
-        const branded = slugifyHash(product||'brand');
-        picks = [branded]
-          .concat(take(broad, Math.ceil((n-1)*0.35)))
-          .concat(take(mid, Math.ceil((n-1)*0.25)))
-          .concat(take(cset, Math.ceil((n-1)*0.2)))
-          .concat(take([...niche], Math.ceil((n-1)*0.2)));
-      } else {
-        picks = take(broad, Math.ceil(n*0.25))
-          .concat(take(mid, Math.ceil(n*0.25)))
-          .concat(take(cset, Math.ceil(n*0.25)))
-          .concat(take([...niche], Math.ceil(n*0.25)));
-      }
-
-      const unique = [];
-      const seen = new Set();
-      picks.forEach(h=>{
-        const w = slugifyHash(h);
-        if (!w || seen.has(w)) return;
-        seen.add(w);
-        unique.push('#'+w);
-      });
-      return unique.slice(0, n);
-    }
-
-    function localGenerate(vars){
-      const r = rng( (readSwitch('daily') ? todaySeed() : '') + JSON.stringify(vars) + Math.random() );
-      const { product, category, audience, goal, pains, benefits, tone, length, emoji, strategy, hashCount, count } = vars;
-
-      const painsPool = pains.length ? pains : (defaultsByCategory[category]?.pains || []);
-      const benefitsPool = benefits.length ? benefits : (defaultsByCategory[category]?.benefits || []);
-      const ctas = CTAS[goal] || CTAS['clicks'];
-      const pack = EMOJI_PACK[emoji] || [];
-
-      const out = [];
-      const seen = new Set();
-      function nearKey(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,' ').slice(0,120); }
-
-      for (let i=0; i<count*3 && out.length<count; i++){
-        const tpl = CAP_TPL[Math.floor(r()*CAP_TPL.length)];
-        const pain = painsPool.length ? painsPool[Math.floor(r()*painsPool.length)] : 'doing it the hard way';
-        const benefit = benefitsPool.length ? benefitsPool[Math.floor(r()*benefitsPool.length)] : 'better results';
-        let cap = tpl
-          .replaceAll('{product}', product || 'this')
-          .replaceAll('{benefit}', benefit)
-          .replaceAll('{pain}', pain);
-
-        cap += (cap.endsWith('.')?'':'') + ' ' + ctas[Math.floor(r()*ctas.length)];
-        cap = injectEmoji(cap, pack, emoji, r);
-        cap = clampLen(cap, length);
-
-        const key = nearKey(cap);
-        if (readSwitch('dedupe') && seen.has(key)) continue;
-        seen.add(key);
-
-        const tags = makeHashtags({product, category, audience, benefitsPool, painsPool, strategy, hashCount});
-        out.push({caption: cap, hashtags: tags});
-      }
-      return out.slice(0, count);
-    }
-
-    // =================== API CALL (Edge) ===================
+    // =================== API CALL ===================
     async function fetchAI(payload){
       const res = await fetch(API_URL, {
         method:'POST',
@@ -556,6 +479,73 @@
         throw new Error(`API ${res.status}: ${txt}`);
       }
       return res.json(); // { combined, captions[], hashtags[] }
+    }
+
+    // =================== LOCAL FALLBACK ===================
+    function makeHashtags({product, category, audience, benefitsPool, painsPool, strategy, hashCount, r}){
+      const n = parseInt(hashCount,10) || 8;
+      const broad = ["tiktokmademebuyit","viral","tiktokshop","fyp"];
+      const mid   = ["review","beforeafter","asmr"];
+      const cset  = ({"beauty":["skincare","glowup","acnetips","skinbarrier"],"skincare":["skincare","barrierrepair","dermtips"],"kitchen":["kitchen","mealprep","kitchenhacks","homecooking"],"cleaning":["cleaningtips","cleantok","deepclean","cleaninghacks"],"gadgets":["gadgets","tech","techtok","setup"],"home":["homedecor","organize","apartment"],"fitness":["fitness","workout","homeworkout","fitnesstips"],"fashion":["fashion","outfit","ootd","capsulewardrobe"],"pets":["pettok","dogsoftiktok","catsoftiktok","petparents"]}[category]||[]);
+      const terms = []
+        .concat((product||'').split(/\W+/))
+        .concat((audience||'').split(/\W+/))
+        .concat(benefitsPool||[])
+        .concat(painsPool||[])
+        .map(s=> slugifyHash(s))
+        .filter(x=> x && x.length>2 && x.length<28);
+      const niche = new Set();
+      terms.forEach(t=>{ niche.add(t); if (Math.random()<0.35) niche.add(t + (Math.random()<0.5?'tips':'hack')); });
+      const take = (arr,k)=>{ const out=[]; const pool=[...arr]; for(let i=0;i<k && pool.length;i++){ out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]); } return out; };
+      let picks = take(broad, Math.ceil(n*0.25))
+        .concat(take(mid, Math.ceil(n*0.25)))
+        .concat(take(cset, Math.ceil(n*0.25)))
+        .concat(take([...niche], Math.ceil(n*0.25)));
+      const unique = []; const seen = new Set();
+      picks.forEach(h=>{ const w = slugifyHash(h); if(!w || seen.has(w)) return; seen.add(w); unique.push('#'+w); });
+      return unique.slice(0,n);
+    }
+    function localGenerate(vars){
+      const r = rng( (readSwitch('daily') ? todaySeed() : '') + JSON.stringify(vars) + Math.random() );
+      const { product, category, audience, goal, pains, benefits, tone, length, emoji, strategy, hashCount, count } = vars;
+      const TONE_LEADS = {bold:"Hot take: ",friendly:"Real talk: ",luxury:"Insider tip: ",scientific:"Backed by data: ",contrarian:"Unpopular opinion: ",playful:"Low effort, high win: "};
+      const CTAS = {
+        clicks: ["Tap to see how it works →","Want the breakdown? Tap through.","Details inside — tap."],
+        "add to cart": ["Grab it while it’s in stock →","Add to cart before price jumps.","Don’t wait — check it now."],
+        "brand awareness": ["Follow for real tests.","Save this for later.","Share with a friend who needs this."],
+        comments: ["Tried this? Tell me your results.","What should I test next? Drop it.","Comment ‘guide’ for steps."],
+        follows: ["More like this daily — follow.","New tests weekly — hit follow.","Follow for quick wins."]
+      };
+      const CAP_TPL = [
+        "{toneLead}{benefit} without the {pain}. {product} just fixed it.",
+        "{toneLead}The fastest path to {benefit}? Start with {product}.",
+        "{toneLead}{audience}: if {pain} is your reality, this is your shortcut.",
+        "{toneLead}Proof over hype — watch how {product} delivers {benefit}."
+      ];
+      const painsPool = pains.length ? pains : ({"kitchen":["spending forever prepping"],"beauty":["wasting money on serums"]}[category]||[]);
+      const benefitsPool = benefits.length ? benefits : ({"kitchen":["5-min meal prep"],"beauty":["glass-skin in 7 days"]}[category]||[]);
+      const pack = ({"none":[], "smart":["⚡️","✅","🧪","✨","🎯","⏱️","💡"], "high":["🔥","💥","✨","😍","🤯","⚡️","🚀"]}[emoji]||[]);
+      const out = []; const seen = new Set();
+      function nearKey(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,' ').slice(0,120); }
+      for (let i=0; i<count*3 && out.length<count; i++){
+        const tpl = CAP_TPL[Math.floor(r()*CAP_TPL.length)];
+        const pain = painsPool.length ? painsPool[Math.floor(r()*painsPool.length)] : 'doing it the hard way';
+        const benefit = benefitsPool.length ? benefitsPool[Math.floor(r()*benefitsPool.length)] : 'better results';
+        let cap = tpl
+          .replaceAll('{toneLead}', TONE_LEADS[tone]||'')
+          .replaceAll('{product}', product || 'this')
+          .replaceAll('{benefit}', benefit)
+          .replaceAll('{pain}', pain)
+          .replaceAll('{audience}', audience || 'smart buyers')
+          .replaceAll('{goalTitle}', goal.replace(/\b\w/g,s=>s.toUpperCase()));
+        cap += (cap.endsWith('.')?'':'') + ' ' + (CTAS[goal]||CTAS['clicks'])[Math.floor(r()*(CTAS[goal]||CTAS['clicks']).length)];
+        cap = injectEmoji(cap, pack, emoji, r);
+        cap = clampLen(cap, length);
+        const key = nearKey(cap); if (readSwitch('dedupe') && seen.has(key)) continue; seen.add(key);
+        const tags = makeHashtags({product, category, audience, benefitsPool, painsPool, strategy, hashCount});
+        out.push({caption: cap, hashtags: tags});
+      }
+      return out.slice(0, count);
     }
 
     // =================== RENDER ===================
@@ -580,9 +570,9 @@
       }
 
       list.forEach((it, i)=>{
+        if (preferCombinedLine && i === 0) return;
         const htags = (it.hashtags||[]).join(' ');
         const cap = it.caption || it.combined || '';
-        if (preferCombinedLine && i === 0) return;
         const box = document.createElement('div');
         box.className = 'cap';
         box.innerHTML = `
@@ -600,7 +590,6 @@
         host.appendChild(box);
       });
 
-      // KPIs
       const capsOnly = list.map(x => x.caption || x.combined || '');
       const avgLen = Math.round(capsOnly.reduce((a,c)=>a+(c?.length||0),0) / Math.max(1,capsOnly.length));
       els.kVar.textContent = String(list.length);
@@ -610,9 +599,7 @@
       host.querySelectorAll('.copy').forEach(btn=>{
         btn.addEventListener('click', ()=>{
           const payload = btn.getAttribute('data-payload') || '';
-          navigator.clipboard.writeText(decodeAttr(payload)).then(()=>{
-            flashStatus('Copied ✅');
-          });
+          navigator.clipboard.writeText(decodeAttr(payload)).then(()=>{ flashStatus('Copied ✅'); });
         });
       });
     }
@@ -656,7 +643,9 @@
         pains: vars.pains,
         tone: vars.tone,
         length: vars.length,
-        platform: 'TikTok'
+        platform: 'TikTok',
+        count: Math.min(8, vars.count || 8),
+        hashCount: Math.min(12, vars.hashCount || 8)
       };
     }
 
@@ -665,41 +654,40 @@
       els.status.textContent = 'Thinking…';
       els.status.style.display = 'block';
 
-      let usedAI = false;
-
-      if (readSwitch('ai')){
+      // Try server AI first if chip is ON
+      if (readSwitch('ai')) {
         try{
           const data = await fetchAI(toApiPayload(vars));
-          // Prefer the paste-ready combined line; then 2 alternates if present
           const combinedLine = data.combined || '';
           const tagsList = Array.isArray(data.hashtags) ? data.hashtags.map(h => h.startsWith('#') ? h : '#'+h) : [];
           const altCaps = Array.isArray(data.captions) ? data.captions.slice(0,2) : [];
           const list = [];
 
-          if (combinedLine){
-            list.push({ combined: combinedLine, caption: combinedLine, hashtags: [] });
-          }
+          if (combinedLine){ list.push({ combined: combinedLine, caption: combinedLine, hashtags: [] }); }
           if (altCaps.length){
             altCaps.forEach(c => list.push({ caption: c, hashtags: tagsList, combined: '' }));
           } else if (!combinedLine && tagsList.length){
             list.push({ caption: 'Your caption', hashtags: tagsList });
           }
 
-          if (list.length){
+          if (!list.length){
+            const local = localGenerate({...vars, count: 6});
+            render(local, false);
+            flashStatus('AI empty — used local ✅');
+          } else {
             render(list, true);
             flashStatus('Generated ✅');
-            usedAI = true;
           }
+          return;
         }catch(e){
           console.warn('AI error -> local fallback:', e.message);
+          flashStatus('AI error — local fallback ✅');
         }
       }
 
-      if (!usedAI){
-        const local = localGenerate({...vars});
-        render(local, false);
-        flashStatus('AI unavailable — local fallback ✅');
-      }
+      // Fallback: local generator
+      const local = localGenerate({...vars});
+      render(local, false);
     }
 
     // =================== EVENTS ===================
@@ -733,8 +721,6 @@
       if (!els.audience.value) els.audience.value = 'busy parents';
       if (!els.pains.value) els.pains.value = 'spending forever chopping; cluttered counters';
       if (!els.benefits.value) els.benefits.value = '5-minute meal prep; one tool replaces 7';
-      // ensure AI chip default on
-      const aiChip = document.querySelector('.chip[data-key="ai"]'); if (aiChip) aiChip.dataset.on = 'true';
       saveState();
       await build();
       document.getElementById('y').textContent = new Date().getFullYear();
