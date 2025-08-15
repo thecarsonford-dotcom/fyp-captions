@@ -187,7 +187,7 @@
         </div>
         <div style="flex:1; min-width:220px">
           <label>Benefits / Outcomes (semicolon)</label>
-          <input id="benefits" type="text" placeholder="e.g., 5-min meal prep; spotless in one pass" />
+          <input id="benefits" type="text" placeholder="e.g., 5-min prep; spotless in one pass" />
         </div>
       </div>
 
@@ -252,7 +252,7 @@
           <button id="exportCsv" class="btn">Export CSV</button>
         </div>
       </div>
-      <div class="note small">AI mode uses <code>/api/generate-captions</code>. If it fails, we auto-fallback to smart local generation.</div>
+      <div class="note small">AI mode uses <code>/api/generate-captions-edge</code>. If it fails, we auto-fallback to local generation.</div>
     </section>
 
     <!-- RIGHT: Results -->
@@ -288,9 +288,8 @@
     // ====================== CONFIG ======================
     const THEME_KEY = 'theme';
     const STATE_KEY = 'CAPTION_CATALYST_STATE_V1';
-
-    // Server AI endpoint (your Vercel route)
-    const API_URL = '/api/generate-captions';
+    // Your Edge route for speed
+    const API_URL = '/api/generate-captions-edge';
 
     // =================== THEME (same as index) ===================
     function setTheme(mode){
@@ -344,13 +343,13 @@
       pets:{ pains:['fur on everything'], benefits:['hair-free couch'], seed:['pets','dog'] },
     };
 
-    // =================== TEMPLATE LIB (local fallback) ===================
+    // =================== TEMPLATE LIB (caption shells, local fallback) ===================
     const CAP_TPL = [
       "Real talk: {benefit} without the {pain}. {product} just did it.",
       "Low effort, high win: {product} → {benefit}.",
       "Unpopular opinion: skip {pain}. Try {product} and get {benefit}.",
       "Insider tip: If {pain} keeps happening, {product} is the shortcut to {benefit}.",
-      "Backed by receipts: {product} = {benefit}. Bye, {pain}.",
+      "Backed by receipts: {product} = {benefit}. Bye, {pain}."
     ];
     const CTAS = {
       clicks: ["Tap for the receipts →","Want the breakdown? Tap through.","Details inside — tap."],
@@ -360,8 +359,8 @@
       follows: ["More like this daily — follow.","New tests weekly — hit follow.","Follow for quick wins."]
     };
     const EMOJI_PACK = { none:[], smart:["⚡️","✅","🧪","✨","🎯","⏱️","💡"], high:["🔥","💥","✨","😍","🤯","⚡️","🚀"] };
-    const BROAD_SEEDS = ["tiktokmademebuyit","viral","tiktokshop"];
-    const MID_SEEDS   = ["review","beforeafter","asmr"];
+    const BROAD_SEEDS = ["tiktokmademebuyit","fyp","viral","tiktokshop","musthave"];
+    const MID_SEEDS   = ["lifehack","unboxing","review","beforeafter","asmr"];
     const CAT_SEEDS   = {
       beauty:["skincare","glowup","acnetips","skinbarrier"],
       skincare:["skincare","barrierrepair","dermtips"],
@@ -545,13 +544,27 @@
       return out.slice(0, count);
     }
 
+    // =================== API CALL (Edge) ===================
+    async function fetchAI(payload){
+      const res = await fetch(API_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok){
+        const txt = await res.text().catch(()=>res.statusText);
+        throw new Error(`API ${res.status}: ${txt}`);
+      }
+      return res.json(); // { combined, captions[], hashtags[] }
+    }
+
     // =================== RENDER ===================
     function render(list, preferCombinedLine){
       const host = els.list; host.innerHTML = '';
 
       if (preferCombinedLine && list.length){
         const first = list[0];
-        const full = (first.combined || (first.caption + ' ' + first.hashtags.join(' '))).trim();
+        const full = (first.combined || (first.caption + ' ' + (first.hashtags||[]).join(' '))).trim();
         const box = document.createElement('div');
         box.className = 'cap';
         box.innerHTML = `
@@ -567,15 +580,15 @@
       }
 
       list.forEach((it, i)=>{
-        const htags = it.hashtags?.join(' ') || '';
+        const htags = (it.hashtags||[]).join(' ');
         const cap = it.caption || it.combined || '';
-        if (preferCombinedLine && i === 0) return; // already shown
+        if (preferCombinedLine && i === 0) return;
         const box = document.createElement('div');
         box.className = 'cap';
         box.innerHTML = `
           <div class="meta">
             <div class="tag">Option ${preferCombinedLine ? i : i+1}</div>
-            <div class="small muted">${cap.length} chars • ${it.hashtags?.length || 0} tags</div>
+            <div class="small muted">${cap.length} chars • ${(it.hashtags||[]).length} tags</div>
           </div>
           <div class="body">${escapeHtml(cap)}</div>
           ${htags ? `<div class="body" style="margin-top:6px;color:var(--muted)">${escapeHtml(htags)}</div>` : ''}
@@ -620,20 +633,6 @@
       a.click(); URL.revokeObjectURL(a.href);
     }
 
-    // =================== API CALL ===================
-    async function fetchAI(payload){
-      const res = await fetch(API_URL, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok){
-        const txt = await res.text().catch(()=>res.statusText);
-        throw new Error(`API ${res.status}: ${txt}`);
-      }
-      return res.json(); // { combined, captions[], hashtags[] }
-    }
-
     // =================== CORE FLOW ===================
     function readVars(){
       const product = strip(els.product.value);
@@ -666,42 +665,41 @@
       els.status.textContent = 'Thinking…';
       els.status.style.display = 'block';
 
-      // Try server AI first
-      try{
-        const data = await fetchAI(toApiPayload(vars));
-        // Prefer the paste-ready "combined" line; also show 2 alternates if present
-        const combinedLine = data.combined || '';
-        const tagsList = Array.isArray(data.hashtags) ? data.hashtags.map(h => h.startsWith('#') ? h : '#'+h) : [];
-        const altCaps = Array.isArray(data.captions) ? data.captions.slice(0,2) : [];
-        const list = [];
+      let usedAI = false;
 
-        if (combinedLine){
-          list.push({ combined: combinedLine, caption: combinedLine, hashtags: [] });
+      if (readSwitch('ai')){
+        try{
+          const data = await fetchAI(toApiPayload(vars));
+          // Prefer the paste-ready combined line; then 2 alternates if present
+          const combinedLine = data.combined || '';
+          const tagsList = Array.isArray(data.hashtags) ? data.hashtags.map(h => h.startsWith('#') ? h : '#'+h) : [];
+          const altCaps = Array.isArray(data.captions) ? data.captions.slice(0,2) : [];
+          const list = [];
+
+          if (combinedLine){
+            list.push({ combined: combinedLine, caption: combinedLine, hashtags: [] });
+          }
+          if (altCaps.length){
+            altCaps.forEach(c => list.push({ caption: c, hashtags: tagsList, combined: '' }));
+          } else if (!combinedLine && tagsList.length){
+            list.push({ caption: 'Your caption', hashtags: tagsList });
+          }
+
+          if (list.length){
+            render(list, true);
+            flashStatus('Generated ✅');
+            usedAI = true;
+          }
+        }catch(e){
+          console.warn('AI error -> local fallback:', e.message);
         }
-        if (altCaps.length){
-          const tagLine = tagsList.join(' ');
-          altCaps.forEach(c => list.push({ caption: c, hashtags: tagsList, combined: '' }));
-        } else if (!combinedLine && tagsList.length){
-          list.push({ caption: 'Your caption', hashtags: tagsList });
-        }
-        if (!list.length){
-          // fallback to local if API returned empty
-          const local = localGenerate({...vars, count: 6});
-          render(local, false);
-          flashStatus('AI empty — used local ✅');
-        } else {
-          render(list, true);
-          flashStatus('Generated ✅');
-        }
-        return;
-      }catch(e){
-        console.warn('AI error -> local fallback:', e.message);
       }
 
-      // Fallback: local generator
-      const local = localGenerate({...vars});
-      render(local, false);
-      flashStatus('AI unavailable — local fallback ✅');
+      if (!usedAI){
+        const local = localGenerate({...vars});
+        render(local, false);
+        flashStatus('AI unavailable — local fallback ✅');
+      }
     }
 
     // =================== EVENTS ===================
@@ -710,11 +708,9 @@
     els.copyAll.addEventListener('click', async ()=>{
       const boxes = Array.from(document.querySelectorAll('.cap'));
       const text = boxes.map(b=>{
-        // first .body may contain combined or caption; next may hold hashtags
         const bodies = b.querySelectorAll('.body');
         const t = bodies[0]?.textContent || '';
         const h = bodies[1]?.textContent || '';
-        // if first card is combined, it's already one line; keep it as is
         return h ? (t + '\n' + h).trim() : t.trim();
       }).join('\n\n');
       await copy(text);
@@ -737,6 +733,8 @@
       if (!els.audience.value) els.audience.value = 'busy parents';
       if (!els.pains.value) els.pains.value = 'spending forever chopping; cluttered counters';
       if (!els.benefits.value) els.benefits.value = '5-minute meal prep; one tool replaces 7';
+      // ensure AI chip default on
+      const aiChip = document.querySelector('.chip[data-key="ai"]'); if (aiChip) aiChip.dataset.on = 'true';
       saveState();
       await build();
       document.getElementById('y').textContent = new Date().getFullYear();
