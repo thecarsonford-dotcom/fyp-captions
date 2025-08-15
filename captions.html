@@ -138,7 +138,7 @@
       </div>
     </div>
 
-    <div class="footer">Powered by your AI backend • /api/generate-captions</div>
+    <div class="footer">Powered by your AI backend • <code>/api/generate</code></div>
   </div>
 
   <script>
@@ -152,7 +152,8 @@
     function setStatus(s){ statusEl.textContent=s; }
 
     async function runGenerator(payload){
-      const res = await fetch('/api/generate-captions', {
+      // UPDATED: call the routed endpoint /api/generate
+      const res = await fetch('/api/generate', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify(payload)
