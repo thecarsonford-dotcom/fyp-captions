@@ -1,44 +1,33 @@
 // /api/generate-captions-edge.js
-// POST /api/generate-captions-edge
-// Body: { product, audience, benefits[], pains[], tone, length, platform, count?, hashCount? }
-// Returns: { combined: string, captions: string[], hashtags: string[] }
-
-export const config = { runtime: 'edge' };
-
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Content-Type': 'application/json; charset=utf-8',
-  };
-}
+// Edge runtime = super fast, no cold starts
+export const runtime = 'edge';
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
-const MODEL = 'gpt-4o-mini';
+const MODEL = 'gpt-4o-mini'; // fast + strong
+
+function json(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      // very permissive CORS so it also works when testing from a different origin
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'POST, OPTIONS',
+      'access-control-allow-headers': 'content-type, authorization'
+    }
+  });
+}
 
 export default async function handler(req) {
-  // CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 200, headers: corsHeaders() });
-  }
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      status: 405,
-      headers: corsHeaders(),
-    });
-  }
+  if (req.method === 'OPTIONS') return json({ ok: true });
+  if (req.method !== 'POST') return json({ error: 'Method Not Allowed' }, 405);
 
   try {
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'Missing OPENAI_API_KEY' }), {
-        status: 500,
-        headers: corsHeaders(),
-      });
-    }
+    if (!apiKey) return json({ error: 'Missing OPENAI_API_KEY' }, 500);
 
     const body = await req.json().catch(() => ({}));
+
     const {
       product = '',
       audience = '',
@@ -47,32 +36,37 @@ export default async function handler(req) {
       tone = 'bold',
       length = 'medium',
       platform = 'tiktok',
-      count = 8,
-      hashCount = 8,
-    } = body || {};
+      count = 6,
+      hashCount = 8
+    } = body;
 
-    // Clamp counts for speed + reliability at the edge
     const N = Math.max(2, Math.min(8, Number(count) || 6));
     const HN = Math.max(6, Math.min(12, Number(hashCount) || 8));
 
-    // Guardrails to avoid ad-speak & “our/brand voice” issues
+    // ——— System prompt tuned for affiliate voice (no "our", no brand ad-speak)
     const system = `
-You are "Caption Catalyst" for FYP Insights Pro — a world-class TikTok affiliate creator.
-Write like you're on FaceTime with your best friend: specific, casual, helpful, and human.
-NEVER use "we", "our", or brand-owner voice. Speak as an independent affiliate/showcaser.
-Prioritize: hook → one concrete benefit → crisp CTA that fits the goal. No hype. No fluff.
+You are "Caption Catalyst" for FYP Insights Pro — an expert TikTok affiliate creator.
+VOICE
+- Talk like you're on FaceTime with your best friend. Casual, specific, honest.
+- You're an affiliate reviewer, not the brand. Avoid "we/our". Use "I/me/my" only when personal experience fits.
+- No salesy fluff. No generic hype. Keep it human and relatable.
 
-Hashtags:
-- Return one flat line, lowercase, space-separated, ${HN} total.
-- Mix: broad (e.g. #fyp, #tiktokshop), category/mid, and niche/SEO for product+audience.
-- No punctuation, no commas, no duplicates.
+STRUCTURE
+- Start with a tight hook that names a real pain or curiosity.
+- One tangible benefit/outcome.
+- One crisp CTA (tap/see how it works/share/follow/etc) — match the platform.
 
-Output JSON ONLY in EXACT shape:
+HASHTAGS
+- One line, lowercase, space-separated, ${HN} total.
+- Mix broad (#fyp, #tiktokshop), category/mid, and niche/SEO for product+audience.
+
+OUTPUT — JSON ONLY in EXACT shape:
 {
-  "captions": ["..."],             // ${N} alternatives, WITHOUT hashtags
-  "hashtags": ["#a","#b","..."],   // ~${HN} tags, space-safe tokens
-  "combined": "caption\\n#tag1 #tag2 ..."  // the single best paste-ready line
-}`.trim();
+  "captions": ["..."],             // ${N} alternatives, NO hashtags inside
+  "hashtags": ["#a","#b","..."],   // ~${HN} tags
+  "combined": "caption\\n#tag1 #tag2 ..." // one paste-ready line (caption + tags)
+}
+`.trim();
 
     const user = `
 product: ${product || '—'}
@@ -82,83 +76,58 @@ pains: ${(Array.isArray(pains) ? pains : []).join('; ')}
 tone: ${tone} | length: ${length} | platform: ${platform}
 alts: ${N} | hashtags: ${HN}
 
-Style rules:
-- Sound personal and real. Show how it helps in everyday life.
-- Avoid ad vibes, avoid brand voice, avoid generic filler.
-- Keep emoji smart and minimal if used at all.
+STYLE GUARDRAILS
+- Sound like a person, not a brand. If unsure, prefer "I found", "I switched", "this saved me", etc.
+- No claims you can't stand behind. Keep it grounded. 
+- Emojis: sprinkle for scannability, not glitter.
 `.trim();
 
-    const openaiRes = await fetch(OPENAI_URL, {
+    const resp = await fetch(OPENAI_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+        'authorization': `Bearer ${apiKey}`,
+        'content-type': 'application/json'
       },
       body: JSON.stringify({
         model: MODEL,
-        temperature: 0.8,
+        temperature: 0.85,
         top_p: 0.9,
         presence_penalty: 0.2,
         frequency_penalty: 0.2,
-        max_tokens: 520,
-        // Some OpenAI models accept `seed`; if unsupported it's ignored.
-        seed: Math.floor(Date.now() / 86400000), // daily-stable vibe
+        max_tokens: 480,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-      }),
+          { role: 'user', content: user }
+        ]
+      })
     });
 
-    if (!openaiRes.ok) {
-      const detail = await openaiRes.text().catch(() => '');
-      return new Response(
-        JSON.stringify({ error: 'OpenAI request failed', detail }),
-        { status: 500, headers: corsHeaders() }
-      );
+    if (!resp.ok) {
+      const detail = await resp.text().catch(() => '');
+      return json({ error: 'OpenAI request failed', detail }, 500);
     }
 
-    const data = await openaiRes.json();
+    const data = await resp.json();
     const content = data?.choices?.[0]?.message?.content || '{}';
 
-    let parsed;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      parsed = {};
-    }
+    let parsed = {};
+    try { parsed = JSON.parse(content); } catch {}
 
-    let captions = Array.isArray(parsed.captions)
-      ? parsed.captions.filter(Boolean)
-      : [];
+    let captions = Array.isArray(parsed.captions) ? parsed.captions.filter(Boolean) : [];
     if (captions.length > N) captions = captions.slice(0, N);
 
-    let hashtags = Array.isArray(parsed.hashtags)
-      ? parsed.hashtags.filter(Boolean)
-      : [];
+    let hashtags = Array.isArray(parsed.hashtags) ? parsed.hashtags.filter(Boolean) : [];
     if (hashtags.length > HN) hashtags = hashtags.slice(0, HN);
 
     let combined = typeof parsed.combined === 'string' ? parsed.combined.trim() : '';
-
-    // Build fallback combined if the model omitted it
     if (!combined && captions.length) {
       const line = hashtags.join(' ').trim();
       combined = line ? `${captions[0]}\n${line}` : captions[0];
     }
 
-    return new Response(
-      JSON.stringify({
-        combined: combined || '',
-        captions,
-        hashtags,
-      }),
-      { status: 200, headers: corsHeaders() }
-    );
+    return json({ combined: combined || '', captions, hashtags });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: 'Server error', detail: String(err?.message || err) }),
-      { status: 500, headers: corsHeaders() }
-    );
+    return json({ error: 'Server error', detail: String(err?.message || err) }, 500);
   }
 }
