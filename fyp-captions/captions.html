@@ -1,800 +1,355 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Caption Catalyst — FYP Edition</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta charset="utf-8"/>
+  <title>Caption Forge — AI Captions & Hashtags</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <meta name="theme-color" content="#0b0f14">
+  <meta name="description" content="Generate elite TikTok captions and hashtags tailored to your product, persona, and goals."/>
   <link rel="icon" href="data:,">
-  <meta name="description" content="AI-powered TikTok caption and hashtag generator. Broad + niche strategy, tuned for FYP.">
-
   <style>
-    /* ===== Theme (matches your index.html) ===== */
     :root{
-      --bg:#0b0f14; --surface:rgba(21,27,33,.75); --card:#0f141b; --border:#1e2a35;
+      --bg:#0b0f14; --surface:rgba(21,27,33,.78); --card:#0f141b; --border:#1e2a35;
       --text:#e8eef6; --muted:#9fb0c2; --accent:#6fe3ff; --accent2:#32c8f0;
-      --radius:16px; --shadow:0 10px 30px rgba(0,0,0,.35);
-      --btn-bg:linear-gradient(180deg,#111827,#0b1220);
+      --radius:14px; --shadow:0 10px 30px rgba(0,0,0,.35);
+      --max: 1180px;
     }
     [data-theme="light"]{
-      --bg:#f7f9fc; --surface:rgba(255,255,255,.9); --card:#fff; --border:#e6ecf2;
-      --text:#0f1720; --muted:#5b6b7c; --accent:#007aff; --accent2:#0a67e5; --shadow:0 10px 30px rgba(0,0,0,.10);
-      --btn-bg:linear-gradient(180deg,#ffffff,#f3f4f6);
+      --bg:#f7f9fc; --surface:rgba(255,255,255,.92); --card:#fff; --border:#e6ecf2;
+      --text:#0f1720; --muted:#5b6b7c; --accent:#007aff; --accent2:#0a67e5; --shadow:0 8px 22px rgba(0,0,0,.08);
     }
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:15px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:15px/1.6 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
     a{color:inherit;text-decoration:none}
+    img{max-width:100%;display:block}
 
-    /* Header */
-    header{position:sticky;top:0;z-index:50;backdrop-filter:saturate(140%) blur(10px);
-      background:linear-gradient(180deg,rgba(10,14,18,.92),rgba(10,14,18,.75));border-bottom:1px solid var(--border)}
-    [data-theme="light"] header{background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.85))}
-    .bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;max-width:1200px;margin:0 auto}
-    .brand{display:flex;align-items:center;gap:10px;min-width:0}
+    header{position:sticky;top:0;z-index:40;backdrop-filter:saturate(140%) blur(10px);
+      background:linear-gradient(180deg,rgba(10,14,18,.92),rgba(10,14,18,.78));border-bottom:1px solid var(--border)}
+    [data-theme="light"] header{background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.86))}
+    .bar{max-width:var(--max);margin:0 auto;padding:10px 12px;display:flex;align-items:center;gap:10px;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:10px}
     .logo{width:22px;height:22px;border-radius:6px;background:linear-gradient(180deg,var(--accent),var(--accent2));box-shadow:0 6px 20px rgba(111,227,255,.22)}
     h1{margin:0;font-size:15px;font-weight:800;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-    /* Tools dropdown (same style as index) */
-    .tools{position:relative}
-    .tools-btn{
-      display:inline-flex;align-items:center;gap:8px;
-      background:var(--surface);border:1px solid var(--border);color:var(--text);
-      padding:8px 10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer
-    }
-    .tools-btn svg{width:14px;height:14px;opacity:.8}
-    .menu{
-      position:absolute;top:110%;left:0;min-width:180px;display:none;
-      background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:6px;z-index:60;
-    }
-    .menu a{
-      display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;color:var(--text);font-weight:700;font-size:13px;
-    }
-    .menu a:hover{background:rgba(255,255,255,.04)}
-    .tools.open .menu{display:block}
+    .nav{display:flex;gap:10px;align-items:center}
+    .dropdown{position:relative}
+    .dropbtn{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);
+      padding:8px 10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer}
+    .menu{position:absolute;top:110%;left:0;min-width:180px;display:none;background:var(--surface);border:1px solid var(--border);
+      border-radius:12px;box-shadow:var(--shadow);padding:6px;z-index:60}
+    .menu a{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;color:var(--text);font-weight:700;font-size:13px}
+    .menu a:hover{background:rgba(255,255,255,.06)}
+    .dropdown.open .menu{display:block}
 
-    /* Quick (desktop) */
-    .quick{display:flex;gap:8px;align-items:center}
     .round{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:16px;cursor:pointer}
-    .round:active{transform:scale(.98)}
-    @media (max-width:899px){ .quick{display:none} }
+    @media (max-width:899px){ .round{display:none} }
 
-    /* Shell */
-    .wrap{max-width:1200px;margin:0 auto;padding:12px}
-    @media (min-width:768px){ .wrap{padding:16px} }
-
-    .hero{max-width:1200px;margin:0 auto;padding:10px 12px 8px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .tagline{font-size:clamp(16px,4.5vw,20px);font-weight:800;letter-spacing:-.01em}
+    .wrap{max-width:var(--max);margin:0 auto;padding:14px 12px}
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .title{font-size:clamp(18px,4.6vw,28px);font-weight:900;letter-spacing:-.01em}
     .subtle{color:var(--muted);font-size:12px}
 
-    .panel{display:grid;gap:12px;grid-template-columns:1fr}
-    @media (min-width:980px){ .panel{grid-template-columns:360px 1fr} }
+    .panel{display:grid;gap:14px;grid-template-columns:1fr}
+    @media(min-width:980px){ .panel{grid-template-columns: 360px 1fr} }
 
-    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
-    .card.pad{padding:14px}
-
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px}
     label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px 2px}
-    input[type=text], textarea, select, .input{
-      width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);outline:none;font-size:14px
-    }
-    textarea{min-height:84px;resize:vertical}
+    input,textarea,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);outline:none}
+    textarea{min-height:70px;resize:vertical}
     .row{display:flex;gap:8px;flex-wrap:wrap}
-    .btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:800;cursor:pointer}
-    .btn.accent{background:linear-gradient(180deg,var(--accent),var(--accent2));color:#001018;border-color:color-mix(in oklab, var(--border), var(--accent) 30%)}
-    .note{color:var(--muted);font-size:12px}
     .chips{display:flex;flex-wrap:wrap;gap:8px}
-    .chip{font-size:12px;padding:7px 10px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:999px;cursor:pointer}
-    .chip[data-on="true"]{background:#18212a;border-color:#2a3a4a}
+    .chip{font-size:12px;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--border);cursor:pointer;user-select:none}
+    .chip[data-on="true"]{background:rgba(255,255,255,.08);border-color:#2a3a4a}
 
-    /* Output */
-    .cols{display:grid;gap:12px}
-    @media (min-width:680px){ .cols{grid-template-columns: 1fr 340px} }
-    .hlist{display:grid;gap:10px}
-    .cap{background:linear-gradient(180deg,#0f141b,#0c1116);border:1px solid var(--border);border-radius:12px;padding:12px}
-    .cap .meta{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
-    .cap .meta .tag{font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid #2a3a4a;background:#161c22}
-    .cap .body{white-space:pre-wrap}
-    .cap .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-    .copy{padding:8px 10px;border-radius:9px;border:1px solid var(--border);background:var(--surface);font-size:12px;cursor:pointer}
+    .btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:800;cursor:pointer}
+    .btn.accent{background:linear-gradient(180deg,var(--accent),var(--accent2));color:#021018;border-color:#164e63}
+    .btn.small{padding:8px 10px;font-size:13px}
 
-    .side{position:sticky;top:86px;align-self:start}
-    .box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
-    .muted{color:var(--muted)}
-    .kpi{display:flex;justify-content:space-between;font-weight:800}
-
-    .status{color:var(--muted);font-size:13px;padding:8px 12px;text-align:center;border-top:1px solid var(--border);border-bottom:1px solid var(--border);
-      background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.00));display:none}
-
-    .small{font-size:12px}
+    .grid{display:grid;gap:12px}
+    @media(min-width:720px){ .grid{grid-template-columns: repeat(2,1fr)} }
+    @media(min-width:1100px){ .grid{grid-template-columns: repeat(3,1fr)} }
+    .result{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;gap:8px;flex-direction:column}
+    .caption{font-size:15px}
+    .hashtags{font-size:12px;color:var(--muted)}
+    .muted{color:var(--muted);font-size:12px}
+    .topbar{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px}
   </style>
 </head>
 <body>
-  <!-- Header -->
   <header>
     <div class="bar">
       <div class="brand">
-        <div class="logo" aria-hidden="true"></div>
-        <h1>Caption Catalyst — FYP Edition</h1>
+        <div class="logo"></div>
+        <h1>FYP Insights Pro</h1>
       </div>
-
-      <!-- Tools -->
-      <div class="tools" id="tools">
-        <button class="tools-btn" id="toolsBtn" aria-haspopup="true" aria-expanded="false">
-          Tools
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        </button>
-        <div class="menu" role="menu" aria-label="Tools">
-          <a href="/leaderboard" role="menuitem">Leaderboard</a>
-          <a href="/hooks" role="menuitem">Hooks</a>
-          <a href="/captions" role="menuitem" aria-current="page">Captions</a>
+      <div class="nav">
+        <div class="dropdown" id="tools">
+          <button class="dropbtn" id="toolsBtn">Tools
+            <svg viewBox="0 0 24 24" fill="none" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <div class="menu" role="menu">
+            <a href="/leaderboard" role="menuitem">Leaderboard</a>
+            <a href="/hooks" role="menuitem">Hooks</a>
+            <a href="/captions" role="menuitem">Captions & Hashtags</a>
+          </div>
         </div>
-      </div>
-
-      <!-- Desktop quick icons -->
-      <div class="quick">
-        <button id="themeBtn" class="round" title="Toggle theme">🌙</button>
+        <button class="round" id="themeBtn" title="Toggle theme">🌙</button>
       </div>
     </div>
   </header>
 
-  <!-- Tagline -->
-  <div class="hero">
-    <div class="tagline">Write faster. Rank smarter. Convert harder.</div>
-    <div class="subtle">AI-tuned captions & hashtag strategy for TikTok Shop.</div>
-  </div>
-
-  <div id="status" class="status">Ready.</div>
-
-  <main class="wrap panel">
-    <!-- LEFT: Controls -->
-    <section class="card pad">
-      <div class="row">
-        <div style="flex:1; min-width:220px">
-          <label>Product / Offer</label>
-          <input id="product" type="text" placeholder="e.g., 14-in-1 Veggie Chopper" />
-        </div>
-        <div style="width:170px">
-          <label>Category</label>
-          <select id="category" class="input">
-            <option value="">— Any —</option>
-            <option>beauty</option><option>skincare</option><option>kitchen</option>
-            <option>cleaning</option><option>gadgets</option><option>home</option>
-            <option>fitness</option><option>fashion</option><option>pets</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="row">
-        <div style="flex:1; min-width:220px">
-          <label>Audience / Persona</label>
-          <input id="audience" type="text" placeholder="e.g., busy parents; students; renters" />
-        </div>
-        <div style="flex:1; min-width:220px">
-          <label>Primary Goal</label>
-          <select id="goal" class="input">
-            <option>clicks</option>
-            <option>add to cart</option>
-            <option>brand awareness</option>
-            <option>comments</option>
-            <option>follows</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="row">
-        <div style="flex:1; min-width:220px">
-          <label>Key pains (semicolon separated)</label>
-          <input id="pains" type="text" placeholder="e.g., long prep; streaky pans; cluttered counters" />
-        </div>
-        <div style="flex:1; min-width:220px">
-          <label>Benefits / Outcomes (semicolon)</label>
-          <input id="benefits" type="text" placeholder="e.g., 5-min prep; spotless in one pass" />
-        </div>
-      </div>
-
-      <div class="row">
-        <div style="flex:1; min-width:160px">
-          <label>Tone</label>
-          <select id="tone" class="input">
-            <option>bold</option><option>friendly</option><option>luxury</option>
-            <option>scientific</option><option>contrarian</option><option>playful</option>
-          </select>
-        </div>
-        <div style="flex:1; min-width:160px">
-          <label>Length</label>
-          <select id="length" class="input">
-            <option>short</option><option selected>medium</option><option>long</option>
-          </select>
-        </div>
-        <div style="flex:1; min-width:160px">
-          <label>Emoji level</label>
-          <select id="emoji" class="input">
-            <option>none</option><option selected>smart</option><option>high</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="row">
-        <div style="flex:1; min-width:160px">
-          <label>Hashtag strategy</label>
-          <select id="strategy" class="input">
-            <option selected>balanced</option>
-            <option>niche-heavy</option>
-            <option>broad-heavy</option>
-            <option>branded</option>
-          </select>
-        </div>
-        <div style="width:170px">
-          <label># per set</label>
-          <select id="hashCount" class="input">
-            <option>6</option><option selected>8</option><option>10</option><option>12</option>
-          </select>
-        </div>
-        <div style="width:170px">
-          <label>How many options?</label>
-          <select id="count" class="input">
-            <option>6</option><option selected>12</option><option>18</option><option>24</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="chips" id="switches" style="flex:1">
-          <div class="chip" data-key="ctas" data-on="true">Add strong CTA</div>
-          <div class="chip" data-key="hooks" data-on="true">Hook-led captioning</div>
-          <div class="chip" data-key="daily" data-on="true">Daily seed (variety)</div>
-          <div class="chip" data-key="dedupe" data-on="true">Dedupe similar</div>
-          <div class="chip" data-key="ai" data-on="false">AI mode (server)</div>
-        </div>
-        <div class="row" style="justify-content:flex-end">
-          <button id="generate" class="btn accent">Generate</button>
-          <button id="shuffle" class="btn">Shuffle</button>
-          <button id="copyAll" class="btn">Copy all</button>
-          <button id="exportCsv" class="btn">Export CSV</button>
-        </div>
-      </div>
-      <div class="note small">Tip: Toggle <strong>AI mode</strong> to route through your model endpoint (see code comment “AI_ENDPOINT”). Otherwise, smart local generation kicks in.</div>
+  <main class="wrap">
+    <section class="hero">
+      <div class="title">Caption Forge — AI Captions & Hashtags</div>
+      <div class="subtle">Elite short-form copy tuned to your product, persona, and goals.</div>
     </section>
 
-    <!-- RIGHT: Results -->
-    <section class="cols">
-      <div class="card pad">
-        <div id="list" class="hlist" aria-live="polite"></div>
+    <section class="panel">
+      <!-- LEFT: Controls -->
+      <div class="card">
+        <label>Product / Offer</label>
+        <input id="product" type="text" placeholder="e.g., Ceramide Barrier Serum, 14-in-1 Chopper, Cordless Mop"/>
+
+        <div class="row">
+          <div style="flex:1">
+            <label>Category</label>
+            <select id="category">
+              <option value="">— Any —</option>
+              <option>beauty</option><option>skincare</option><option>kitchen</option>
+              <option>cleaning</option><option>gadgets</option><option>home</option>
+              <option>fitness</option><option>fashion</option><option>pets</option>
+            </select>
+          </div>
+          <div style="flex:1">
+            <label>Persona (optional)</label>
+            <input id="persona" type="text" placeholder="e.g., students, busy parents, renters, oily skin"/>
+          </div>
+        </div>
+
+        <label>Key pains (semicolon separated)</label>
+        <input id="pains" type="text" placeholder="e.g., frizzy hair; streaky mirrors; cluttered counters"/>
+
+        <label>Key benefits (semicolon separated)</label>
+        <input id="benefits" type="text" placeholder="e.g., glass skin; 5-minute prep; spotless in one pass"/>
+
+        <label>Goals (semicolon separated)</label>
+        <input id="goals" type="text" placeholder="e.g., clicks; saves; purchase; UGC recruitment"/>
+
+        <div class="row">
+          <div style="flex:1">
+            <label>Tone</label>
+            <div id="tones" class="chips">
+              <div class="chip" data-key="bold">Bold</div>
+              <div class="chip" data-key="friendly">Friendly</div>
+              <div class="chip" data-key="luxury">Luxury</div>
+              <div class="chip" data-key="budget">Budget</div>
+              <div class="chip" data-key="scientific">Scientific</div>
+              <div class="chip" data-key="contrarian">Contrarian</div>
+            </div>
+          </div>
+          <div>
+            <label>Length</label>
+            <select id="length">
+              <option>short</option><option selected>medium</option><option>long</option>
+            </select>
+          </div>
+          <div>
+            <label>How many?</label>
+            <select id="count">
+              <option>6</option><option selected>12</option><option>18</option><option>24</option>
+            </select>
+          </div>
+          <div>
+            <label>Mode</label>
+            <select id="mode">
+              <option value="both" selected>Captions + Hashtags</option>
+              <option value="captions">Captions only</option>
+              <option value="hashtags">Hashtags only</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:6px">
+          <button class="btn accent" id="generate">Generate</button>
+          <button class="btn" id="shuffle">Shuffle</button>
+          <button class="btn" id="copyAll">Copy All</button>
+          <button class="btn" id="exportCsv">Export CSV</button>
+          <span class="muted" id="status">Ready.</span>
+        </div>
       </div>
 
-      <aside class="side">
-        <div class="box" style="margin-bottom:12px">
-          <div class="kpi"><span>Caption length</span><span id="kLen">—</span></div>
-          <div class="kpi"><span>Hashtag count</span><span id="kHash">—</span></div>
-          <div class="kpi"><span>Variants</span><span id="kVar">—</span></div>
+      <!-- RIGHT: Results -->
+      <div class="card">
+        <div class="topbar">
+          <div class="muted">Results</div>
+          <div class="muted" id="meta"></div>
         </div>
-        <div class="box">
-          <div class="muted small">Best practices baked in:</div>
-          <ul class="small" style="margin:6px 0 0 16px;line-height:1.55">
-            <li>Hook first, benefit specificity, then CTA.</li>
-            <li>Emoji used as scannability, not glitter.</li>
-            <li>Hashtags: broad + mid + niche + (optional) branded.</li>
-            <li>Auto-dedupe & seed for daily variety.</li>
-          </ul>
-        </div>
-      </aside>
+        <div id="grid" class="grid" aria-live="polite"></div>
+      </div>
     </section>
   </main>
 
-  <footer class="wrap" style="text-align:center;color:var(--muted);padding-top:4px;border-top:1px solid var(--border)">
-    © <span id="y"></span> FYP Insights Pro — Caption Catalyst
-  </footer>
-
   <script>
-    // ====================== CONFIG ======================
-    const THEME_KEY = 'theme';
-    const STATE_KEY = 'CAPTION_CATALYST_STATE_V1';
-    // Optional AI endpoint (POST JSON: {prompt:string} -> {text:string[]})
-    // Example adapter; set to your serverless function or proxy if desired:
-    const AI_ENDPOINT = ""; // e.g., "/api/generate"
-    const AI_AUTH = "";     // e.g., "Bearer sk-…"
-
-    // =================== THEME (same as index) ===================
+    // THEME
+    const THEME_KEY='theme';
     function setTheme(mode){
-      document.documentElement.setAttribute('data-theme', mode === 'light' ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', mode==='light'?'light':'dark');
       localStorage.setItem(THEME_KEY, mode);
-      const btn = document.getElementById('themeBtn');
-      if (btn) btn.textContent = mode === 'light' ? '☀️' : '🌙';
+      const b=document.getElementById('themeBtn'); if(b) b.textContent=(mode==='light'?'☀️':'🌙');
     }
-    (function initTheme(){
-      setTheme(localStorage.getItem(THEME_KEY) || 'dark');
-      const btn = document.getElementById('themeBtn');
-      if (btn) btn.addEventListener('click', ()=>{
-        const cur = localStorage.getItem(THEME_KEY) || 'dark';
-        setTheme(cur === 'dark' ? 'light' : 'dark');
-      });
+    (function(){ setTheme(localStorage.getItem(THEME_KEY)||'dark'); })();
+    document.getElementById('themeBtn')?.addEventListener('click',()=>{
+      const curr=localStorage.getItem(THEME_KEY)||'dark';
+      setTheme(curr==='dark'?'light':'dark');
+    });
+
+    // TOOLS DROPDOWN
+    (function(){
+      const tools=document.getElementById('tools');
+      const btn=document.getElementById('toolsBtn');
+      if(!tools||!btn) return;
+      function close(){ tools.classList.remove('open'); btn.setAttribute('aria-expanded','false'); }
+      function open(){ tools.classList.add('open'); btn.setAttribute('aria-expanded','true'); }
+      btn.addEventListener('click', (e)=>{ e.stopPropagation(); tools.classList.contains('open')?close():open(); });
+      document.addEventListener('click', (e)=>{ if(!tools.contains(e.target)) close(); });
+      document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') close(); });
     })();
 
-    // =================== TOOLS MENU ===================
-    (function initMenu(){
-      const tools = document.getElementById('tools');
-      const toolsBtn = document.getElementById('toolsBtn');
-      if (!tools || !toolsBtn) return;
-      function close(){ tools.classList.remove('open'); toolsBtn.setAttribute('aria-expanded','false'); }
-      function open(){ tools.classList.add('open'); toolsBtn.setAttribute('aria-expanded','true'); }
-      toolsBtn.addEventListener('click', (e)=>{ e.stopPropagation(); (tools.classList.contains('open')?close():open()); });
-      document.addEventListener('click', (e)=>{ if (!tools.contains(e.target)) close(); });
-      document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') close(); });
-    })();
+    // UI helpers
+    const $ = q=>document.querySelector(q);
+    const $$= q=>Array.from(document.querySelectorAll(q));
+    const strip = s => (s||'').toString().replace(/\s+/g,' ').trim();
+    const splitSemi = s => strip(s).split(/\s*;\s*/).filter(Boolean);
 
-    // =================== DOM SHORTCUTS ===================
-    const $ = (q)=>document.querySelector(q);
-    const $$ = (q)=>Array.from(document.querySelectorAll(q));
-    const strip = (s)=> (s||'').toString().replace(/\s+/g,' ').trim();
-    const splitSemi = (s)=> strip(s).split(/\s*;\s*/).filter(Boolean);
-    const todaySeed = ()=> new Date().toISOString().slice(0,10);
-    const rng = (seed) => { let t = 0; for (let i=0;i<seed.length;i++) t = (t*31 + seed.charCodeAt(i))>>>0;
-      return function(){ let r = t += 0x6D2B79F5; r = Math.imul(r ^ r >>> 15, r | 1); r ^= r + Math.imul(r ^ r >>> 7, r | 61); return ((r ^ r >>> 14) >>> 0) / 4294967296; };
-    };
-    const copy = async (txt)=>{ try{ await navigator.clipboard.writeText(txt) }catch{} };
+    // Tone chips
+    $$('#tones .chip').forEach(ch=> ch.addEventListener('click', ()=> {
+      ch.dataset.on = ch.dataset.on==='true' ? 'false' : 'true';
+    }));
 
-    // =================== DEFAULTS BY CATEGORY ===================
-    const defaultsByCategory = {
-      beauty:{ pains:['wasting money on serums','red irritated skin'], benefits:['glass-skin in 7 days','barrier-safe glow'], seed:['skincare','serum'] },
-      skincare:{ pains:['acne flares','10-step routines'], benefits:['derm-approved minimal routine'], seed:['skin','glow'] },
-      kitchen:{ pains:['spending forever prepping','slippery cutting board'], benefits:['5-min meal prep','one tool replaces 7'], seed:['kitchen','mealprep','cook'] },
-      cleaning:{ pains:['streaky mirrors','scrub for 30 minutes'], benefits:['spotless in one pass','zero streaks'], seed:['cleaning','home'] },
-      gadgets:{ pains:['dead battery by noon','cables everywhere'], benefits:['all-day battery','one cable'], seed:['tech','gadgets'] },
-      home:{ pains:['cluttered counters','no storage'], benefits:['renter-friendly storage'], seed:['home','organize'] },
-      fitness:{ pains:['burnout','plateaus'], benefits:['10-min routines','visible progress'], seed:['fitness','workout'] },
-      fashion:{ pains:['fits that don’t flatter'], benefits:['tailored look under $50'], seed:['fashion','outfit'] },
-      pets:{ pains:['fur on everything'], benefits:['hair-free couch'], seed:['pets','dog'] },
-    };
-
-    // =================== TEMPLATE LIB (caption shells) ===================
-    // Tokens: {product} {benefit} {pain} {audience} {goal} {toneLead}
-    const CAP_TPL = [
-      "{toneLead}{benefit} without the {pain}. {product} just fixed it.",
-      "{toneLead}The fastest path to {benefit}? Start with {product}.",
-      "{toneLead}{audience}: if {pain} is your reality, this is your shortcut.",
-      "{toneLead}Proof over hype — watch how {product} delivers {benefit}.",
-      "{toneLead}I stopped {pain}. {product} in, {benefit} out.",
-      "{toneLead}New rule: one change → {benefit}. (It’s {product}.)",
-      "{toneLead}Real talk: {benefit} is easy when you remove {pain}.",
-      "{toneLead}{goalTitle} mode: do this first. {product} → {benefit}.",
-      "{toneLead}Before vs after with {product}. Unfiltered {benefit}.",
-      "{toneLead}If you want {benefit}, start here → {product}."
-    ];
-
-    const TONE_LEADS = {
-      bold:"Hot take: ",
-      friendly:"Real talk: ",
-      luxury:"Insider tip: ",
-      scientific:"Backed by data: ",
-      contrarian:"Unpopular opinion: ",
-      playful:"Low effort, high win: ",
-    };
-
-    const CTAS = {
-      clicks: ["Tap to see how it works →", "Link in bio — details inside.", "Want the breakdown? Tap through."],
-      "add to cart": ["Grab it while it’s in stock →", "Add to cart before price jumps.", "Don’t wait — check it out now."],
-      "brand awareness": ["Follow for more real tests.", "Save this for later.", "Share with a friend who needs this."],
-      comments: ["Comment ‘guide’ and I’ll DM the steps.", "What should I test next? Drop it.", "Tried this? Tell me your results."],
-      follows: ["Follow for daily shortcuts.", "More like this every day — follow.", "New tests weekly — hit follow."]
-    };
-
-    const EMOJI_PACK = {
-      none: [],
-      smart: ["⚡️","✅","🧪","🔥","🎯","⏱️","💡","🔒","📦","✨"],
-      high: ["🔥","💥","✨","😍","🤯","⚡️","🚀","💡","🧪","🛒","🎯"]
-    };
-
-    const BROAD_SEEDS = ["tiktokmademebuyit","fyp","viral","tiktokshop","musthave"];
-    const MID_SEEDS   = ["lifehack","unboxing","review","beforeafter","asmr"];
-    const CAT_SEEDS   = {
-      beauty:["skincare","glowup","acnetips","skinbarrier"],
-      skincare:["skincare","barrierrepair","dermtips"],
-      kitchen:["kitchen","mealprep","kitchenhacks","homecooking"],
-      cleaning:["cleaningtips","cleantok","deepclean","cleaninghacks"],
-      gadgets:["gadgets","tech","techtok","setup"],
-      home:["homedecor","organize","apartment"],
-      fitness:["fitness","workout","homeworkout","fitnesstips"],
-      fashion:["fashion","outfit","ootd","capsulewardrobe"],
-      pets:["pettok","dogsoftiktok","catsoftiktok","petparents"]
-    };
-
-    // =================== STATE ===================
-    const els = {
-      product:  $('#product'),
-      category: $('#category'),
-      audience: $('#audience'),
-      goal:     $('#goal'),
-      pains:    $('#pains'),
-      benefits: $('#benefits'),
-      tone:     $('#tone'),
-      length:   $('#length'),
-      emoji:    $('#emoji'),
-      strategy: $('#strategy'),
-      hashCount:$('#hashCount'),
-      count:    $('#count'),
-      switches: $('#switches'),
-      generate: $('#generate'),
-      shuffle:  $('#shuffle'),
-      copyAll:  $('#copyAll'),
-      exportCsv:$('#exportCsv'),
-      list:     $('#list'),
-      kLen:     $('#kLen'),
-      kHash:    $('#kHash'),
-      kVar:     $('#kVar'),
-      status:   $('#status'),
-    };
-
-    function readSwitch(key){ return els.switches.querySelector(`.chip[data-key="${key}"]`)?.dataset.on === 'true'; }
-    function toggleChip(ch){ ch.dataset.on = ch.dataset.on === 'true' ? 'false' : 'true'; saveState(); }
-
-    // =================== STATE PERSIST ===================
-    function saveState(){
-      const s = {
-        product: els.product.value, category: els.category.value, audience: els.audience.value, goal: els.goal.value,
-        pains: els.pains.value, benefits: els.benefits.value, tone: els.tone.value, length: els.length.value,
-        emoji: els.emoji.value, strategy: els.strategy.value, hashCount: els.hashCount.value, count: els.count.value,
-        switches: $$('.chip').map(c=>({k:c.dataset.key,on:c.dataset.on}))
+    // Build request payload
+    function buildPayload(){
+      const tones = $$('#tones .chip[data-on="true"]').map(x=>x.dataset.key);
+      const tone = tones.length ? tones.join(', ') : 'neutral';
+      return {
+        product:  $('#product').value,
+        category: $('#category').value,
+        persona:  $('#persona').value,
+        pains:    splitSemi($('#pains').value),
+        benefits: splitSemi($('#benefits').value),
+        goals:    splitSemi($('#goals').value),
+        tone,
+        length:   $('#length').value,
+        count:    parseInt($('#count').value,10) || 12,
+        mode:     $('#mode').value
       };
-      localStorage.setItem(STATE_KEY, JSON.stringify(s));
-    }
-    function loadState(){
-      try{
-        const raw = localStorage.getItem(STATE_KEY); if (!raw) return;
-        const s = JSON.parse(raw);
-        els.product.value = s.product||''; els.category.value=s.category||''; els.audience.value=s.audience||'';
-        els.goal.value=s.goal||'clicks'; els.pains.value=s.pains||''; els.benefits.value=s.benefits||'';
-        els.tone.value=s.tone||'bold'; els.length.value=s.length||'medium'; els.emoji.value=s.emoji||'smart';
-        els.strategy.value=s.strategy||'balanced'; els.hashCount.value=s.hashCount||'8'; els.count.value=s.count||'12';
-        (s.switches||[]).forEach(x=>{ const n = els.switches.querySelector(`.chip[data-key="${x.k}"]`); if (n) n.dataset.on=x.on; });
-      }catch{}
-    }
-    loadState();
-    els.switches.addEventListener('click', (e)=>{ const n = e.target.closest('.chip'); if (n) toggleChip(n); });
-    $$('#product, #category, #audience, #goal, #pains, #benefits, #tone, #length, #emoji, #strategy, #hashCount, #count').forEach(n=>{
-      n.addEventListener('input', saveState); n.addEventListener('change', saveState);
-    });
-
-    // =================== HELPERS ===================
-    function sample(arr, r){ return arr[Math.floor(r()*arr.length)]; }
-    function clampLen(t, mode){
-      if (mode==='short' && t.length>80) return t.split(' ').slice(0,12).join(' ') + '…';
-      if (mode==='long'  && t.length<80) return t + ' — here’s why.';
-      return t;
-    }
-    function injectEmoji(t, pack, intensity, r){
-      if (!pack.length || intensity==='none') return t;
-      // Smart: sprinkle 1–2 where it makes sense (ends / before CTA)
-      const pick = ()=> sample(pack, r);
-      if (intensity==='smart'){
-        if (r() < 0.7) t = t + ' ' + pick();
-        if (r() < 0.35) t = pick() + ' ' + t;
-      } else {
-        // high
-        t = pick() + ' ' + t + ' ' + pick();
-      }
-      return t;
-    }
-    function slugifyHash(s){
-      return strip(s.toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,''));
     }
 
-    // =================== PROMPT (for AI mode) ===================
-    function buildPrompt(vars){
-      const {product, category, audience, goal, pains, benefits, tone, length, emoji, strategy, hashCount, count} = vars;
-      return `You are FYP Insights Pro’s Caption Catalyst. Write ${count} TikTok-ready captions with hashtags.
-Context:
-- Product/offer: ${product||'—'}
-- Category: ${category||'—'}
-- Audience: ${audience||'—'}
-- Goal: ${goal}
-- Pains: ${pains.join('; ')}
-- Benefits: ${benefits.join('; ')}
-- Tone: ${tone}; Length: ${length}; Emoji level: ${emoji}
-- Hashtag strategy: ${strategy}; Hashtag count per set: ${hashCount}
+    // Render results
+    function render(res, mode){
+      const grid = $('#grid'); grid.innerHTML='';
+      const list = [];
 
-Rules:
-- Format each option as: "caption text" \\n "#hashtag1 #hashtag2 …"
-- Start captions with a strong hook, include a tangible benefit, then a crisp CTA aligned to "${goal}".
-- Emojis used for scannability; avoid overstuffing.
-- Hashtags must be lowercase, no spaces, no punctuation; mix broad + niche (and branded if relevant).
-- Avoid repeated near-duplicates; every option must feel distinct.
-Return only the list, no commentary.`;
-    }
-
-    async function tryAI(vars){
-  if (!AI_ENDPOINT) return null;
-  try{
-    const res = await fetch(AI_ENDPOINT, {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', ...(AI_AUTH?{'Authorization':AI_AUTH}:{}) },
-      body: JSON.stringify(vars)
-    });
-    if (!res.ok) throw new Error('AI endpoint error '+res.status);
-    const data = await res.json();
-
-    if (Array.isArray(data?.list)) {
-      return data.list.map(item => ({
-        caption: String(item.caption || '').trim(),
-        hashtags: Array.isArray(item.hashtags) ? item.hashtags.map(String) : []
-      })).filter(x => x.caption);
-    }
-    if (Array.isArray(data?.text)) {
-      return data.text.map(block => {
-        const parts = String(block).split('\n');
-        const cap = (parts[0] || '').trim();
-        const tagsLine = (parts.slice(1).join(' ') || '').replace(/\s+/g,' ').trim();
-        const hashtags = tagsLine.split(/\s+/).filter(x => x.startsWith('#'));
-        return { caption: cap, hashtags };
-      }).filter(x => x.caption);
-    }
-    return null;
-  }catch(e){
-    console.warn('AI fallback:', e.message);
-    return null;
-  }
-}
-
-
-    // =================== LOCAL GENERATION ===================
-    function localGenerate(vars){
-      const r = rng( (readSwitch('daily') ? todaySeed() : '') + JSON.stringify(vars) + Math.random() );
-      const {
-        product, category, audience, goal, pains, benefits, tone, length, emoji, strategy, hashCount, count,
-      } = vars;
-
-      const toneLead = TONE_LEADS[tone] || '';
-      const goalTitle = goal.replace(/\b\w/g,s=>s.toUpperCase());
-
-      // Pools
-      const catDefault = defaultsByCategory[category] || {pains:[], benefits:[], seed:[]};
-      const painsPool = pains.length ? pains : catDefault.pains;
-      const benefitsPool = benefits.length ? benefits : catDefault.benefits;
-
-      // Build captions
-      const out = [];
-      const seen = new Set();
-      const pack = EMOJI_PACK[emoji] || [];
-
-      function nearKey(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\b(the|a|an|and|or|to|in|for|with)\b/g,'').slice(0,120); }
-
-      for (let i=0; i<count*3 && out.length<count; i++){
-        const tpl = sample(CAP_TPL, r);
-        const pain = painsPool.length ? sample(painsPool, r) : 'doing it the hard way';
-        const benefit = benefitsPool.length ? sample(benefitsPool, r) : 'better results';
-        let cap = tpl
-          .replaceAll('{toneLead}', toneLead)
-          .replaceAll('{product}', product || 'this')
-          .replaceAll('{benefit}', benefit)
-          .replaceAll('{pain}', pain)
-          .replaceAll('{audience}', audience || 'smart buyers')
-          .replaceAll('{goalTitle}', goalTitle);
-
-        // CTA
-        if (readSwitch('ctas')){
-          const ctas = CTAS[goal] || CTAS['clicks'];
-          cap += (cap.endsWith('.')?'':'') + ' ' + sample(ctas, r);
-        }
-
-        // Emoji
-        cap = injectEmoji(cap, pack, emoji, r);
-        // Length
-        cap = clampLen(cap, length);
-
-        const key = nearKey(cap);
-        if (readSwitch('dedupe') && seen.has(key)) continue;
-        seen.add(key);
-
-        // Hashtags
-        const tags = makeHashtags({product, category, audience, benefitsPool, painsPool, strategy, hashCount, r});
-        out.push({caption: cap, hashtags: tags});
-      }
-      return out.slice(0, count);
-    }
-
-    function makeHashtags({product, category, audience, benefitsPool, painsPool, strategy, hashCount, r}){
-      const n = parseInt(hashCount,10) || 8;
-      const base = new Set();
-
-      // broad/mid seeds
-      const broad = [...BROAD_SEEDS];
-      const mid   = [...MID_SEEDS];
-
-      // category seeds
-      const cset = CAT_SEEDS[category] || [];
-
-      // product & topic seeds
-      const terms = []
-        .concat((product||'').split(/\W+/))
-        .concat((audience||'').split(/\W+/))
-        .concat(benefitsPool||[])
-        .concat(painsPool||[])
-        .map(s=> slugifyHash(s))
-        .filter(x=> x && x.length>2 && x.length<28);
-
-      const niche = new Set();
-      terms.forEach(t=>{
-        if (t.length<=2) return;
-        // compose 1-grams and some 2-grams
-        niche.add(t);
-        if (r()<0.35 && terms.length>1){ niche.add(t + (r()<0.5?'tips':'hack')); }
-      });
-
-      function take(arr, k){ const out=[]; const pool=[...arr]; for (let i=0;i<k && pool.length;i++){ out.push(pool.splice(Math.floor(r()*pool.length),1)[0]); } return out; }
-
-      // Mix by strategy
-      let picks = [];
-      if (strategy==='niche-heavy'){
-        picks = take([...niche], Math.ceil(n*0.6))
-          .concat(take(cset, Math.ceil(n*0.2)))
-          .concat(take(mid, Math.ceil(n*0.1)))
-          .concat(take(broad, Math.ceil(n*0.1)));
-      } else if (strategy==='broad-heavy'){
-        picks = take(broad, Math.ceil(n*0.4))
-          .concat(take(mid, Math.ceil(n*0.25)))
-          .concat(take(cset, Math.ceil(n*0.2)))
-          .concat(take([...niche], Math.ceil(n*0.15)));
-      } else if (strategy==='branded'){
-        const branded = slugifyHash(product||'brand');
-        picks = [branded]
-          .concat(take(broad, Math.ceil((n-1)*0.35)))
-          .concat(take(mid, Math.ceil((n-1)*0.25)))
-          .concat(take(cset, Math.ceil((n-1)*0.2)))
-          .concat(take([...niche], Math.ceil((n-1)*0.2)));
-      } else {
-        // balanced
-        picks = take(broad, Math.ceil(n*0.25))
-          .concat(take(mid, Math.ceil(n*0.25)))
-          .concat(take(cset, Math.ceil(n*0.25)))
-          .concat(take([...niche], Math.ceil(n*0.25)));
-      }
-
-      // Clean, unique, slice n
-      const unique = [];
-      const seen = new Set();
-      picks.forEach(h=>{
-        const w = slugifyHash(h);
-        if (!w || seen.has(w)) return;
-        seen.add(w);
-        unique.push('#'+w);
-      });
-      return unique.slice(0, n);
-    }
-
-    // =================== RENDER ===================
-    function render(list){
-      const host = els.list; host.innerHTML = '';
-      list.forEach((it, i)=>{
-        const box = document.createElement('div');
-        box.className = 'cap';
-        const htags = it.hashtags.join(' ');
-        const full = it.caption + '\n' + htags;
-        box.innerHTML = `
-          <div class="meta">
-            <div class="tag">Option ${i+1}</div>
-            <div class="small muted">${it.caption.length} chars • ${it.hashtags.length} tags</div>
-          </div>
-          <div class="body">${escapeHtml(it.caption)}</div>
-          <div class="body" style="margin-top:6px;color:var(--muted)">${escapeHtml(htags)}</div>
-          <div class="actions">
-            <button class="copy" data-idx="${i}" data-type="cap">Copy caption</button>
-            <button class="copy" data-idx="${i}" data-type="tags">Copy hashtags</button>
-            <button class="copy" data-idx="${i}" data-type="both">Copy both</button>
-          </div>`;
-        host.appendChild(box);
-      });
-      els.kVar.textContent = String(list.length);
-      const avgLen = Math.round(list.reduce((a,c)=>a+c.caption.length,0) / Math.max(1,list.length));
-      els.kLen.textContent = isFinite(avgLen)? `${avgLen} avg` : '—';
-      els.kHash.textContent = list[0]?.hashtags?.length || '—';
-
-      host.querySelectorAll('.copy').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          const idx = parseInt(btn.dataset.idx,10);
-          const type = btn.dataset.type;
-          const it = list[idx];
-          const tagsLine = it.hashtags.join(' ');
-          let payload = it.caption;
-          if (type==='tags') payload = tagsLine;
-          if (type==='both') payload = it.caption + '\n' + tagsLine;
-          copy(payload);
-          flashStatus(`Copied ${type==='both' ? 'caption + hashtags' : type} ✅`);
+      if (mode!=='hashtags'){
+        (res.captions||[]).forEach((c, i)=>{
+          list.push({ caption: c, hashtags: (res.hashtags||[])[i] ? [res.hashtags[i]] : [] });
         });
+      }
+      if (mode==='hashtags' && (res.hashtags||[]).length){
+        res.hashtags.forEach(h=>{
+          list.push({ caption:'', hashtags: Array.isArray(h)?h:[h] });
+        });
+      }
+
+      if (!list.length){
+        $('#meta').textContent='No results';
+        return;
+      }
+
+      const frag=document.createDocumentFragment();
+      list.forEach((row, idx)=>{
+        const el = document.createElement('div');
+        el.className='result';
+        const cap = row.caption ? `<div class="caption">${escapeHtml(row.caption)}</div>` : '';
+        const tags = (Array.isArray(row.hashtags)?row.hashtags:[])
+          .join(' ')
+          .replace(/\s+/g,' ')
+          .trim();
+
+        el.innerHTML = `
+          <div class="row" style="justify-content:space-between;align-items:center">
+            <strong>#${idx+1}</strong>
+            <div class="row">
+              <button class="btn small copy-cap">Copy Caption</button>
+              <button class="btn small copy-hash">Copy Hashtags</button>
+            </div>
+          </div>
+          ${cap}
+          <div class="hashtags">${escapeHtml(tags)}</div>
+        `;
+        el.querySelector('.copy-cap').addEventListener('click', ()=> navigator.clipboard.writeText(row.caption||''));
+        el.querySelector('.copy-hash').addEventListener('click', ()=> navigator.clipboard.writeText(tags||''));
+        frag.appendChild(el);
       });
+      grid.appendChild(frag);
+      $('#meta').textContent = `${list.length} ${mode==='hashtags'?'hashtag sets':'caption set(s)'} generated`;
     }
 
-    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-    function flashStatus(msg){ els.status.textContent = msg; els.status.style.display='block'; clearTimeout(flashStatus._t); flashStatus._t = setTimeout(()=> els.status.style.display='none', 1500); }
+    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 
-    function exportCsv(list){
-      const rows = list.map((it,i)=> ({idx:i+1, caption:it.caption, hashtags:it.hashtags.join(' ')}));
-      const esc = s=> `"${String(s).replace(/"/g,'""')}"`;
-      const csv = 'idx,caption,hashtags\n' + rows.map(r=> [r.idx, esc(r.caption), esc(r.hashtags)].join(',')).join('\n');
+    // CSV export
+    function exportCsv(){
+      const rows = Array.from(document.querySelectorAll('.result')).map(el=>{
+        const t = el.querySelector('.caption')?.textContent?.trim()||'';
+        const h = el.querySelector('.hashtags')?.textContent?.trim()||'';
+        return { caption:t, hashtags:h };
+      });
+      const csv = 'caption,hashtags\n' + rows.map(r=> `"${(r.caption||'').replace(/"/g,'""')}","${(r.hashtags||'').replace(/"/g,'""')}"`).join('\n');
       const blob = new Blob([csv], {type:'text/csv'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `captions_${todaySeed()}.csv`;
-      a.click(); URL.revokeObjectURL(a.href);
+      a.download = `captions_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
     }
 
-    // =================== CORE FLOW ===================
-    function readVars(){
-      const product = strip(els.product.value);
-      const category = strip(els.category.value);
-      const audience = strip(els.audience.value);
-      const goal = strip(els.goal.value||'clicks');
-      const pains = splitSemi(els.pains.value);
-      const benefits = splitSemi(els.benefits.value);
-      return {
-        product, category, audience, goal, pains, benefits,
-        tone: els.tone.value, length: els.length.value, emoji: els.emoji.value,
-        strategy: els.strategy.value, hashCount: els.hashCount.value, count: parseInt(els.count.value,10)||12
-      };
-    }
-
-    async function build(){
-      const vars = readVars();
-      let out = null;
-
-      if (readSwitch('ai')){
-  const ai = await tryAI(vars);
-  if (ai && ai.length){
-    out = ai.slice(0, vars.count);
-  }
-}
-          // Parse AI lines "caption\n#tags"
-          const parsed = [];
-          ai.forEach(block=>{
-            const parts = String(block).split('\n');
-            const cap = strip(parts[0]||'');
-            const tagsLine = (parts.slice(1).join(' ') || '').replace(/\s+/g,' ').trim();
-            const hashtags = tagsLine.split(/\s+/).filter(x=> x.startsWith('#')).slice(0, parseInt(vars.hashCount,10)||8);
-            if (cap) parsed.push({caption: cap, hashtags: hashtags.length?hashtags: makeHashtags({product:vars.product, category:vars.category, audience:vars.audience, benefitsPool:vars.benefits, painsPool:vars.pains, strategy:vars.strategy, hashCount:vars.hashCount, r:Math.random})});
-          });
-          out = parsed.slice(0, vars.count);
-        }
+    // Shuffle (client-side reorder)
+    function shuffle(){
+      const grid = $('#grid');
+      const cards = Array.from(grid.children);
+      for (let i = cards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        grid.insertBefore(cards[j], cards[i]);
       }
-
-      if (!out){
-        out = localGenerate({...vars});
-      }
-      render(out);
-      return out;
     }
 
-    // =================== EVENTS ===================
-    els.generate.addEventListener('click', build);
-    els.shuffle.addEventListener('click', build);
-    els.copyAll.addEventListener('click', async ()=>{
-      const boxes = Array.from(document.querySelectorAll('.cap'));
-      const text = boxes.map(b=>{
-        const t = b.querySelector('.body')?.textContent || '';
-        const h = b.querySelectorAll('.body')[1]?.textContent || '';
-        return (t + '\n' + h).trim();
-      }).join('\n\n');
-      await copy(text);
-      flashStatus(`Copied ${boxes.length} variants ✅`);
-    });
-    els.exportCsv.addEventListener('click', async ()=>{
-      const current = Array.from(document.querySelectorAll('.cap')).map(el=>{
-        const cap = el.querySelector('.body')?.textContent || '';
-        const h   = el.querySelectorAll('.body')[1]?.textContent || '';
-        return {caption:cap, hashtags:h.trim().split(/\s+/).filter(Boolean)};
-      });
-      exportCsv(current);
+    // Actions
+    $('#exportCsv').addEventListener('click', exportCsv);
+    $('#shuffle').addEventListener('click', shuffle);
+    $('#copyAll').addEventListener('click', ()=>{
+      const caps = Array.from(document.querySelectorAll('.caption')).map(n=>n.textContent.trim()).filter(Boolean);
+      const tags = Array.from(document.querySelectorAll('.hashtags')).map(n=>n.textContent.trim()).filter(Boolean);
+      const out = caps.map((c,i)=> c + (tags[i]?('\n'+tags[i]):'')).join('\n\n');
+      navigator.clipboard.writeText(out||'');
+      $('#status').textContent = `Copied ${caps.length || tags.length} items to clipboard.`;
     });
 
-    // First render with sensible defaults
-    (async function init(){
-      // Gentle defaults for first-load demo
-      if (!els.product.value) els.product.value = '14-in-1 Veggie Chopper';
-      if (!els.category.value) els.category.value = 'kitchen';
-      if (!els.audience.value) els.audience.value = 'busy parents';
-      if (!els.pains.value) els.pains.value = 'spending forever chopping; cluttered counters';
-      if (!els.benefits.value) els.benefits.value = '5-minute meal prep; one tool replaces 7';
-      saveState();
-      const initial = await build();
-      if (initial?.length) flashStatus('Generated initial set ✅');
-      document.getElementById('y').textContent = new Date().getFullYear();
-    })();
+    $('#generate').addEventListener('click', async ()=>{
+      const payload = buildPayload();
+      $('#status').textContent = 'Thinking…';
+      try{
+        const res = await fetch('/api/generate-captions', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || 'Error');
+        render(json, payload.mode);
+        $('#status').textContent = json.notes ? `Done — ${json.notes}` : 'Done.';
+      }catch(e){
+        $('#status').textContent = 'Error generating. Check API key or try again.';
+        console.error(e);
+      }
+    });
   </script>
 </body>
 </html>
