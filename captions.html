@@ -196,9 +196,17 @@
       setStatus('Thinking…');
       try{
         const data = await runGenerator(payload);
-        renderCaptions(data.captions || []);
-        renderTags((data.hashtags || []).map(h=>h.replace(/^#/,'').trim()));
-        setStatus('Done');
+
+const combined = data.combined || (Array.isArray(data.captions) ? data.captions[0] : '');
+if (combined) {
+  renderCaptions([combined]);     // show one ready-to-paste line
+  renderTags([]);                 // tags already included inline; optional to keep side list empty
+} else {
+  renderCaptions(data.captions || []);
+  renderTags((data.hashtags || []).map(h=>h.replace(/^#/,'').trim()));
+}
+setStatus('Done');
+
       }catch(e){
         setStatus('Error');
         alert(e.message);
@@ -229,3 +237,4 @@
   </script>
 </body>
 </html>
+
