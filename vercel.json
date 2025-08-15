@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "framework": null,
+  "routes": [
+    { "src": "^/captions$", "dest": "/captions.html" }
+  ],
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs20.x"
+    }
+  }
+}
