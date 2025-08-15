@@ -1,30 +1,24 @@
-// Serverless function for Vercel (Node 18).
+// /api/generate-captions.js
 // POST /api/generate-captions
 // Body: { product, audience, benefits[], pains[], tone, length, platform, count?, hashCount? }
-// Returns: {
-//   captions: string[],
-//   hashtags_sets: string[][],
-//   combined: string[] // "caption\n#tag1 #tag2 …"
-// }
+// Returns: { combined: string, captions: string[], hashtags: string[] }
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const MODEL = "gpt-4o-mini"; // fast + high quality
 
-// Simple CORS helper (so you can call from any page on your domain)
-function setCORS(res) {
+function cors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 }
 
 module.exports = async (req, res) => {
-  setCORS(res);
+  cors(res);
 
   if (req.method === "OPTIONS") {
     res.status(200).end();
     return;
   }
-
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method Not Allowed" });
     return;
@@ -49,48 +43,34 @@ module.exports = async (req, res) => {
       hashCount = 8
     } = (req.body || {});
 
-    // Guard rails (keeps latency low)
-    const N = Math.max(3, Math.min(12, Number(count) || 8));
-    const HN = Math.max(4, Math.min(15, Number(hashCount) || 8));
+    const N = Math.max(2, Math.min(8, Number(count) || 6));
+    const HN = Math.max(6, Math.min(12, Number(hashCount) || 8));
 
-    // “FaceTime with a best friend” style system prompt
-    const systemPrompt = `
-You are "Caption Catalyst" for FYP Insights Pro — an expert TikTok creator who writes viral captions.
-Voice & Style:
-- Sound like a friend on FaceTime: casual, specific, a little playful, zero ad-speak.
-- Hook fast. One concrete benefit. One crisp CTA aligned to the goal. Keep fluff out.
-- Emojis: use sparingly for scannability (if helpful). No emoji spam.
-
-Hashtag Strategy:
-- Output a single line of hashtags per option (lowercase, no punctuation), spaced with a single space.
-- Mix: 2-3 broad (#fyp, #tiktokshop, etc.), 2-3 category/mid, 3-5 niche/SEO relevant to product/audience.
-- Never repeat the same set verbatim. Keep each set distinct.
-
-Formatting (IMPORTANT):
-Return strict JSON with this shape ONLY:
+    const system = `
+You are "Caption Catalyst" for FYP Insights Pro — an expert TikTok creator.
+Voice:
+- Sounds like telling a best friend on FaceTime. Casual, specific, playful. Zero ad-speak.
+- Start with a hook, one tangible benefit, one crisp CTA. No fluff.
+Hashtags:
+- One line, lowercase, space-separated, ${HN} total.
+- Mix broad (#fyp, #tiktokshop), category/mid, and niche/SEO for product+audience.
+JSON ONLY in this exact shape:
 {
-  "captions": ["..."],             // ${N} captions, each without hashtags
-  "hashtags_sets": [["#a","#b"]],  // ${N} arrays, each with ~${HN} hashtags
-  "combined": ["caption\\n#tag1 #tag2 ..."] // ${N} items, copy/paste ready
+  "captions": ["..."],             // ${N} alternatives, no hashtags
+  "hashtags": ["#a","#b", "..."],  // ~${HN} tags
+  "combined": "caption\\n#tag1 #tag2 ..."
 }
-No extra keys, comments, or prose.
 `.trim();
 
-    // Build the user prompt concisely (lower token cost, faster)
-    const userPrompt = `
-Product: ${product || "—"}
-Audience: ${audience || "—"}
-Benefits: ${Array.isArray(benefits) ? benefits.join("; ") : benefits}
-Pains: ${Array.isArray(pains) ? pains.join("; ") : pains}
-Tone: ${tone} | Length: ${length} | Platform: ${platform}
-Count: ${N} | Hashtags per set: ${HN}
+    const user = `
+product: ${product || "—"}
+audience: ${audience || "—"}
+benefits: ${(Array.isArray(benefits)?benefits:[]).join("; ")}
+pains: ${(Array.isArray(pains)?pains:[]).join("; ")}
+tone: ${tone} | length: ${length} | platform: ${platform}
+alts: ${N} | hashtags: ${HN}
 
-Make the captions feel human and specific, not salesy.
-Examples of good openers (do NOT reuse verbatim): 
-- "okay real talk — ..."
-- "quick tip if you're dealing with ..."
-- "i finally found a fix for ..."
-Keep each caption distinct. 
+Make it human, specific, and non-salesy. Avoid hype words. Be relatable & natural.
 `.trim();
 
     const resp = await fetch(OPENAI_URL, {
@@ -101,16 +81,15 @@ Keep each caption distinct.
       },
       body: JSON.stringify({
         model: MODEL,
-        temperature: 0.9,     // friendly/creative but not chaotic
+        temperature: 0.85,
         top_p: 0.9,
-        presence_penalty: 0.3,
+        presence_penalty: 0.2,
         frequency_penalty: 0.2,
-        // compact outputs → faster, cheaper
-        max_tokens: 650,
-        response_format: { type: "json_object" }, // enforce JSON
+        max_tokens: 550,
+        response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
+          { role: "system", content: system },
+          { role: "user", content: user }
         ]
       })
     });
@@ -123,34 +102,30 @@ Keep each caption distinct.
 
     const data = await resp.json();
     const content = data?.choices?.[0]?.message?.content || "{}";
-
     let parsed;
     try {
       parsed = JSON.parse(content);
     } catch {
-      // extremely rare — fallback to empty structure
-      parsed = { captions: [], hashtags_sets: [], combined: [] };
+      parsed = {};
     }
 
-    // Light validation & trimming
-    const caps = Array.isArray(parsed.captions) ? parsed.captions.slice(0, N) : [];
-    const sets = Array.isArray(parsed.hashtags_sets) ? parsed.hashtags_sets.slice(0, N).map(s =>
-      (Array.isArray(s) ? s : []).map(t => String(t).trim()).filter(Boolean).slice(0, HN)
-    ) : [];
-    const combo = Array.isArray(parsed.combined) ? parsed.combined.slice(0, N) : [];
+    let captions = Array.isArray(parsed.captions) ? parsed.captions.filter(Boolean) : [];
+    if (captions.length > N) captions = captions.slice(0, N);
 
-    // If “combined” missing, build it
-    const combined = combo.length === N && combo.every(x => typeof x === "string" && x.includes("#"))
-      ? combo
-      : caps.map((c, i) => {
-          const line = (sets[i] || []).join(" ").trim();
-          return line ? `${c}\n${line}` : c;
-        });
+    let hashtags = Array.isArray(parsed.hashtags) ? parsed.hashtags.filter(Boolean) : [];
+    if (hashtags.length > HN) hashtags = hashtags.slice(0, HN);
+
+    let combined = typeof parsed.combined === "string" ? parsed.combined.trim() : "";
+
+    if (!combined && captions.length) {
+      const line = hashtags.join(" ").trim();
+      combined = line ? `${captions[0]}\n${line}` : captions[0];
+    }
 
     res.status(200).json({
-      captions: caps,
-      hashtags_sets: sets,
-      combined: combined
+      combined: combined || "",
+      captions,
+      hashtags
     });
 
   } catch (err) {
