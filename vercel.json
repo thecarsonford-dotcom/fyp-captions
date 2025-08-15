@@ -1,7 +1,13 @@
 {
-  "version": 2,
+  "regions": ["iad1"],
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs20.x",
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  },
   "routes": [
-    { "src": "/api/generate", "dest": "/api/generate-captions.js" },
-    { "src": "/api/ping", "dest": "/api/ping.js" }
+    { "src": "/api/(.*)", "dest": "/api/$1" }
   ]
 }
