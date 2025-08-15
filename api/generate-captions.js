@@ -1,5 +1,4 @@
-// /api/generate-captions-edge.js
-// Edge Function version of generate-captions
+// /api/generate-captions.js
 export const config = { runtime: 'edge' };
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
@@ -83,7 +82,6 @@ alts: ${N} | hashtags: ${HN}
 Sound like a real person, not a brand. Keep it tight, specific, and viral-worthy.
 `.trim();
 
-  // Timeout guard (Edge runtime supports AbortController)
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort("timeout"), OPENAI_TIMEOUT_MS);
 
@@ -112,7 +110,6 @@ Sound like a real person, not a brand. Keep it tight, specific, and viral-worthy
     clearTimeout(timer);
 
     if (!resp.ok) {
-      // fall back quickly if OpenAI errors
       const fallback = fallbackGenerate({ product, audience, benefits, pains, N, HN });
       return json({ ...fallback, from: "fallback" }, 200);
     }
@@ -148,7 +145,6 @@ Sound like a real person, not a brand. Keep it tight, specific, and viral-worthy
   }
 }
 
-/* ---------- fast fallback (human-ish) ---------- */
 const BROAD = ["fyp","tiktokshop","tiktokmademebuyit","viral"];
 const MID   = ["review","beforeafter","unboxing","asmr"];
 const CAT   = {
