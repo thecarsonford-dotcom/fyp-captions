@@ -1,14 +1,12 @@
 {
+  "version": 2,
+  "framework": null,
+  "routes": [
+    { "src": "^/captions$", "dest": "/captions.html" }
+  ],
   "functions": {
     "api/**/*.js": {
-      "runtime": "nodejs20.x",
-      "maxDuration": 15,
-      "memory": 256
+      "runtime": "nodejs20.x"
     }
-  },
-  "routes": [
-    { "src": "^/api/(.*)$", "dest": "/api/$1" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/$1" }
-  ]
+  }
 }
