@@ -1,6 +1,7 @@
 {
-  "cleanUrls": true,
-  "rewrites": [
-    { "source": "/captions", "destination": "/captions.html" }
+  "version": 2,
+  "routes": [
+    { "src": "/api/generate", "dest": "/api/generate-captions.js" },
+    { "src": "/api/ping", "dest": "/api/ping.js" }
   ]
 }
