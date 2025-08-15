@@ -119,10 +119,13 @@ function heuristicFilter(cands){
   return keep.length ? keep : cands;
 }
 
-async function openaiChat(model, messages, extra={}){
-  const res = await fetch('https://api.openai.com/v1/chat/completions',{
-    method:'POST',
-    headers:{'authorization':`Bearer ${OPENAI_API_KEY}`, 'content-type':'application/json'},
+async function openaiChat(model, messages, extra={}) {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'authorization': `Bearer ${OPENAI_API_KEY}`,
+      'content-type': 'application/json'
+    },
     body: JSON.stringify({
       model,
       temperature: extra.temperature ?? 0.85,
@@ -130,12 +133,15 @@ async function openaiChat(model, messages, extra={}){
       presence_penalty: extra.presence_penalty ?? 0.2,
       frequency_penalty: extra.frequency_penalty ?? 0.3,
       messages,
-      response_format: { type: 'json_object' in (extra||{}) ? extra.response_format : { type: 'json_object' } }, // ensure JSON where needed
+      // Always enforce valid type here:
+      response_format: { type: 'json_object' }
     })
   });
+
   if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
   return res.json();
 }
+
 
 export default async function handler(req){
   try{
