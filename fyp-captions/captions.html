@@ -2,354 +2,229 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Caption Forge — AI Captions & Hashtags</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-  <meta name="theme-color" content="#0b0f14">
-  <meta name="description" content="Generate elite TikTok captions and hashtags tailored to your product, persona, and goals."/>
-  <link rel="icon" href="data:,">
+  <meta name="description" content="Generate high-performing TikTok captions and hashtags with AI. Tuned for hooks, benefits, and discovery."/>
   <style>
     :root{
-      --bg:#0b0f14; --surface:rgba(21,27,33,.78); --card:#0f141b; --border:#1e2a35;
-      --text:#e8eef6; --muted:#9fb0c2; --accent:#6fe3ff; --accent2:#32c8f0;
-      --radius:14px; --shadow:0 10px 30px rgba(0,0,0,.35);
-      --max: 1180px;
+      --bg:#0b0f14; --surface:rgba(21,27,33,.75); --card:#0f141b; --border:#1e2a35;
+      --text:#e8eef6; --muted:#9fb0c2; --accent:#6fe3ff; --accent2:#32c8f0; --radius:14px;
     }
-    [data-theme="light"]{
-      --bg:#f7f9fc; --surface:rgba(255,255,255,.92); --card:#fff; --border:#e6ecf2;
-      --text:#0f1720; --muted:#5b6b7c; --accent:#007aff; --accent2:#0a67e5; --shadow:0 8px 22px rgba(0,0,0,.08);
-    }
-    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:15px/1.6 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial}
     a{color:inherit;text-decoration:none}
-    img{max-width:100%;display:block}
-
-    header{position:sticky;top:0;z-index:40;backdrop-filter:saturate(140%) blur(10px);
-      background:linear-gradient(180deg,rgba(10,14,18,.92),rgba(10,14,18,.78));border-bottom:1px solid var(--border)}
-    [data-theme="light"] header{background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.86))}
-    .bar{max-width:var(--max);margin:0 auto;padding:10px 12px;display:flex;align-items:center;gap:10px;justify-content:space-between}
+    .shell{max-width:1100px;margin:0 auto;padding:14px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:10;
+      backdrop-filter:saturate(140%) blur(10px); background:linear-gradient(180deg,rgba(10,14,18,.92),rgba(10,14,18,.75)); border-bottom:1px solid var(--border); padding:10px 12px}
     .brand{display:flex;align-items:center;gap:10px}
-    .logo{width:22px;height:22px;border-radius:6px;background:linear-gradient(180deg,var(--accent),var(--accent2));box-shadow:0 6px 20px rgba(111,227,255,.22)}
-    h1{margin:0;font-size:15px;font-weight:800;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-    .nav{display:flex;gap:10px;align-items:center}
-    .dropdown{position:relative}
-    .dropbtn{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);
-      padding:8px 10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer}
-    .menu{position:absolute;top:110%;left:0;min-width:180px;display:none;background:var(--surface);border:1px solid var(--border);
-      border-radius:12px;box-shadow:var(--shadow);padding:6px;z-index:60}
-    .menu a{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;color:var(--text);font-weight:700;font-size:13px}
-    .menu a:hover{background:rgba(255,255,255,.06)}
-    .dropdown.open .menu{display:block}
-
-    .round{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:16px;cursor:pointer}
-    @media (max-width:899px){ .round{display:none} }
-
-    .wrap{max-width:var(--max);margin:0 auto;padding:14px 12px}
-    .hero{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    .title{font-size:clamp(18px,4.6vw,28px);font-weight:900;letter-spacing:-.01em}
-    .subtle{color:var(--muted);font-size:12px}
-
-    .panel{display:grid;gap:14px;grid-template-columns:1fr}
-    @media(min-width:980px){ .panel{grid-template-columns: 360px 1fr} }
-
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px}
+    .logo{width:22px;height:22px;border-radius:6px;background:linear-gradient(180deg,var(--accent),var(--accent2))}
+    .title{font-weight:800;letter-spacing:.2px;font-size:15px}
+    nav{display:flex;gap:8px}
+    .tab{padding:8px 10px;border:1px solid var(--border);background:var(--surface);border-radius:10px;font-size:13px}
+    .tab.active{outline:2px solid var(--accent)}
+    .wrap{max-width:1100px;margin:0 auto;padding:16px 12px}
+    .grid{display:grid;gap:14px}
+    @media(min-width:960px){ .grid{grid-template-columns: 360px 1fr} }
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
     label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px 2px}
-    input,textarea,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);outline:none}
-    textarea{min-height:70px;resize:vertical}
+    input,textarea,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0d131a;color:var(--text);outline:none}
+    textarea{min-height:86px;resize:vertical}
     .row{display:flex;gap:8px;flex-wrap:wrap}
-    .chips{display:flex;flex-wrap:wrap;gap:8px}
-    .chip{font-size:12px;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--border);cursor:pointer;user-select:none}
-    .chip[data-on="true"]{background:rgba(255,255,255,.08);border-color:#2a3a4a}
-
-    .btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:800;cursor:pointer}
-    .btn.accent{background:linear-gradient(180deg,var(--accent),var(--accent2));color:#021018;border-color:#164e63}
-    .btn.small{padding:8px 10px;font-size:13px}
-
-    .grid{display:grid;gap:12px}
-    @media(min-width:720px){ .grid{grid-template-columns: repeat(2,1fr)} }
-    @media(min-width:1100px){ .grid{grid-template-columns: repeat(3,1fr)} }
-    .result{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;gap:8px;flex-direction:column}
-    .caption{font-size:15px}
-    .hashtags{font-size:12px;color:var(--muted)}
-    .muted{color:var(--muted);font-size:12px}
-    .topbar{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px}
+    .btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:linear-gradient(180deg,#111827,#0b1220);color:var(--text);font-weight:800;cursor:pointer}
+    .btn.accent{background:linear-gradient(180deg,var(--accent),var(--accent2));color:#001018;border-color:#103342}
+    .subtle{color:var(--muted);font-size:12px}
+    .stack{display:grid;gap:10px}
+    .result{border:1px dashed var(--border);border-radius:12px;padding:10px}
+    .result h3{margin:0 0 6px 0;font-size:13px;color:var(--muted)}
+    .result ul{margin:0;padding-left:18px}
+    .result li{margin:6px 0}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:12px}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+    .muted{color:var(--muted)}
+    .footer{color:var(--muted);text-align:center;padding:16px 12px;border-top:1px solid var(--border);margin-top:16px}
   </style>
 </head>
 <body>
   <header>
-    <div class="bar">
-      <div class="brand">
-        <div class="logo"></div>
-        <h1>FYP Insights Pro</h1>
-      </div>
-      <div class="nav">
-        <div class="dropdown" id="tools">
-          <button class="dropbtn" id="toolsBtn">Tools
-            <svg viewBox="0 0 24 24" fill="none" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
-          <div class="menu" role="menu">
-            <a href="/leaderboard" role="menuitem">Leaderboard</a>
-            <a href="/hooks" role="menuitem">Hooks</a>
-            <a href="/captions" role="menuitem">Captions & Hashtags</a>
-          </div>
-        </div>
-        <button class="round" id="themeBtn" title="Toggle theme">🌙</button>
-      </div>
+    <div class="brand">
+      <div class="logo"></div>
+      <div class="title">Caption Forge</div>
     </div>
+    <nav>
+      <a class="tab" href="/leaderboard">Leaderboard</a>
+      <a class="tab active" href="/captions">Captions & Hashtags</a>
+      <a class="tab" href="/hooks">Hooks</a>
+    </nav>
   </header>
 
-  <main class="wrap">
-    <section class="hero">
-      <div class="title">Caption Forge — AI Captions & Hashtags</div>
-      <div class="subtle">Elite short-form copy tuned to your product, persona, and goals.</div>
-    </section>
-
-    <section class="panel">
-      <!-- LEFT: Controls -->
-      <div class="card">
-        <label>Product / Offer</label>
-        <input id="product" type="text" placeholder="e.g., Ceramide Barrier Serum, 14-in-1 Chopper, Cordless Mop"/>
-
-        <div class="row">
-          <div style="flex:1">
-            <label>Category</label>
-            <select id="category">
-              <option value="">— Any —</option>
-              <option>beauty</option><option>skincare</option><option>kitchen</option>
-              <option>cleaning</option><option>gadgets</option><option>home</option>
-              <option>fitness</option><option>fashion</option><option>pets</option>
-            </select>
-          </div>
-          <div style="flex:1">
-            <label>Persona (optional)</label>
-            <input id="persona" type="text" placeholder="e.g., students, busy parents, renters, oily skin"/>
-          </div>
+  <div class="wrap">
+    <div class="grid">
+      <!-- LEFT: controls -->
+      <div class="card stack">
+        <div>
+          <label>Product / Offer</label>
+          <input id="product" placeholder="e.g., Ceramide Barrier Serum"/>
         </div>
-
-        <label>Key pains (semicolon separated)</label>
-        <input id="pains" type="text" placeholder="e.g., frizzy hair; streaky mirrors; cluttered counters"/>
-
-        <label>Key benefits (semicolon separated)</label>
-        <input id="benefits" type="text" placeholder="e.g., glass skin; 5-minute prep; spotless in one pass"/>
-
-        <label>Goals (semicolon separated)</label>
-        <input id="goals" type="text" placeholder="e.g., clicks; saves; purchase; UGC recruitment"/>
-
+        <div>
+          <label>Audience</label>
+          <input id="audience" placeholder="e.g., oily skin; sensitive; students"/>
+        </div>
+        <div>
+          <label>Benefits (semicolon separated)</label>
+          <input id="benefits" placeholder="e.g., glass skin; barrier repair; 7-day results"/>
+        </div>
+        <div>
+          <label>Pain points (semicolon separated)</label>
+          <input id="pains" placeholder="e.g., redness; breakouts; makeup separation"/>
+        </div>
         <div class="row">
           <div style="flex:1">
             <label>Tone</label>
-            <div id="tones" class="chips">
-              <div class="chip" data-key="bold">Bold</div>
-              <div class="chip" data-key="friendly">Friendly</div>
-              <div class="chip" data-key="luxury">Luxury</div>
-              <div class="chip" data-key="budget">Budget</div>
-              <div class="chip" data-key="scientific">Scientific</div>
-              <div class="chip" data-key="contrarian">Contrarian</div>
-            </div>
+            <select id="tone">
+              <option value="">Auto</option>
+              <option>Bold</option>
+              <option>Friendly</option>
+              <option>Luxury</option>
+              <option>Scientific</option>
+              <option>Contrarian</option>
+            </select>
           </div>
-          <div>
+          <div style="flex:1">
             <label>Length</label>
             <select id="length">
               <option>short</option><option selected>medium</option><option>long</option>
             </select>
           </div>
-          <div>
-            <label>How many?</label>
-            <select id="count">
-              <option>6</option><option selected>12</option><option>18</option><option>24</option>
-            </select>
+        </div>
+        <div>
+          <label>Platform Hints</label>
+          <select id="platform">
+            <option value="tiktok" selected>TikTok</option>
+            <option value="reels">Instagram Reels</option>
+            <option value="shorts">YouTube Shorts</option>
+          </select>
+        </div>
+        <div class="toolbar">
+          <button id="generate" class="btn accent">Generate</button>
+          <button id="shuffle" class="btn">Shuffle</button>
+          <button id="copyAll" class="btn">Copy All</button>
+        </div>
+        <div class="subtle">Tip: add 2–3 benefits & 2 pains for sharper outputs.</div>
+      </div>
+
+      <!-- RIGHT: results -->
+      <div class="stack">
+        <div class="card">
+          <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px">
+            <strong>Captions</strong>
+            <span class="pill" id="status">Ready</span>
           </div>
-          <div>
-            <label>Mode</label>
-            <select id="mode">
-              <option value="both" selected>Captions + Hashtags</option>
-              <option value="captions">Captions only</option>
-              <option value="hashtags">Hashtags only</option>
-            </select>
+          <div class="result" id="captionsBox">
+            <h3>Suggested captions</h3>
+            <ul id="captionsList"></ul>
           </div>
         </div>
 
-        <div class="row" style="margin-top:6px">
-          <button class="btn accent" id="generate">Generate</button>
-          <button class="btn" id="shuffle">Shuffle</button>
-          <button class="btn" id="copyAll">Copy All</button>
-          <button class="btn" id="exportCsv">Export CSV</button>
-          <span class="muted" id="status">Ready.</span>
+        <div class="card">
+          <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px">
+            <strong>Hashtags</strong>
+            <span class="pill muted">SEO + niche + trend</span>
+          </div>
+          <div class="result" id="tagsBox">
+            <h3>Suggested hashtags</h3>
+            <ul id="tagsList" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px;list-style:none;padding:0;margin:0"></ul>
+          </div>
         </div>
       </div>
+    </div>
 
-      <!-- RIGHT: Results -->
-      <div class="card">
-        <div class="topbar">
-          <div class="muted">Results</div>
-          <div class="muted" id="meta"></div>
-        </div>
-        <div id="grid" class="grid" aria-live="polite"></div>
-      </div>
-    </section>
-  </main>
+    <div class="footer">Powered by your AI backend • /api/generate-captions</div>
+  </div>
 
   <script>
-    // THEME
-    const THEME_KEY='theme';
-    function setTheme(mode){
-      document.documentElement.setAttribute('data-theme', mode==='light'?'light':'dark');
-      localStorage.setItem(THEME_KEY, mode);
-      const b=document.getElementById('themeBtn'); if(b) b.textContent=(mode==='light'?'☀️':'🌙');
+    const $ = (q)=>document.querySelector(q);
+    const product=$('#product'), audience=$('#audience'), benefits=$('#benefits'), pains=$('#pains'),
+          tone=$('#tone'), lengthSel=$('#length'), platform=$('#platform'),
+          statusEl=$('#status'), captionsList=$('#captionsList'), tagsList=$('#tagsList');
+
+    function val(n){ return (n.value||'').trim(); }
+    function toArr(s){ return (s||'').split(/\s*;\s*/).filter(Boolean); }
+    function setStatus(s){ statusEl.textContent=s; }
+
+    async function runGenerator(payload){
+      const res = await fetch('/api/generate-captions', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      if(!res.ok){
+        const t = await res.text().catch(()=>res.statusText);
+        throw new Error(`API ${res.status}: ${t}`);
+      }
+      return res.json(); // { captions: string[], hashtags: string[] }
     }
-    (function(){ setTheme(localStorage.getItem(THEME_KEY)||'dark'); })();
-    document.getElementById('themeBtn')?.addEventListener('click',()=>{
-      const curr=localStorage.getItem(THEME_KEY)||'dark';
-      setTheme(curr==='dark'?'light':'dark');
-    });
 
-    // TOOLS DROPDOWN
-    (function(){
-      const tools=document.getElementById('tools');
-      const btn=document.getElementById('toolsBtn');
-      if(!tools||!btn) return;
-      function close(){ tools.classList.remove('open'); btn.setAttribute('aria-expanded','false'); }
-      function open(){ tools.classList.add('open'); btn.setAttribute('aria-expanded','true'); }
-      btn.addEventListener('click', (e)=>{ e.stopPropagation(); tools.classList.contains('open')?close():open(); });
-      document.addEventListener('click', (e)=>{ if(!tools.contains(e.target)) close(); });
-      document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') close(); });
-    })();
+    function renderCaptions(list){
+      captionsList.innerHTML='';
+      (list||[]).forEach(txt=>{
+        const li=document.createElement('li');
+        li.textContent=txt;
+        captionsList.appendChild(li);
+      });
+    }
 
-    // UI helpers
-    const $ = q=>document.querySelector(q);
-    const $$= q=>Array.from(document.querySelectorAll(q));
-    const strip = s => (s||'').toString().replace(/\s+/g,' ').trim();
-    const splitSemi = s => strip(s).split(/\s*;\s*/).filter(Boolean);
+    function renderTags(list){
+      tagsList.innerHTML='';
+      (list||[]).forEach(tag=>{
+        const li=document.createElement('li');
+        li.innerHTML = `<span class="pill">#${tag.replace(/^#/,'')}</span>`;
+        tagsList.appendChild(li);
+      });
+    }
 
-    // Tone chips
-    $$('#tones .chip').forEach(ch=> ch.addEventListener('click', ()=> {
-      ch.dataset.on = ch.dataset.on==='true' ? 'false' : 'true';
-    }));
-
-    // Build request payload
-    function buildPayload(){
-      const tones = $$('#tones .chip[data-on="true"]').map(x=>x.dataset.key);
-      const tone = tones.length ? tones.join(', ') : 'neutral';
-      return {
-        product:  $('#product').value,
-        category: $('#category').value,
-        persona:  $('#persona').value,
-        pains:    splitSemi($('#pains').value),
-        benefits: splitSemi($('#benefits').value),
-        goals:    splitSemi($('#goals').value),
-        tone,
-        length:   $('#length').value,
-        count:    parseInt($('#count').value,10) || 12,
-        mode:     $('#mode').value
+    async function generate(){
+      const payload = {
+        product: val(product),
+        audience: val(audience),
+        benefits: toArr(val(benefits)),
+        pains: toArr(val(pains)),
+        tone: val(tone),
+        length: val(lengthSel),
+        platform: val(platform)
       };
-    }
-
-    // Render results
-    function render(res, mode){
-      const grid = $('#grid'); grid.innerHTML='';
-      const list = [];
-
-      if (mode!=='hashtags'){
-        (res.captions||[]).forEach((c, i)=>{
-          list.push({ caption: c, hashtags: (res.hashtags||[])[i] ? [res.hashtags[i]] : [] });
-        });
-      }
-      if (mode==='hashtags' && (res.hashtags||[]).length){
-        res.hashtags.forEach(h=>{
-          list.push({ caption:'', hashtags: Array.isArray(h)?h:[h] });
-        });
-      }
-
-      if (!list.length){
-        $('#meta').textContent='No results';
-        return;
-      }
-
-      const frag=document.createDocumentFragment();
-      list.forEach((row, idx)=>{
-        const el = document.createElement('div');
-        el.className='result';
-        const cap = row.caption ? `<div class="caption">${escapeHtml(row.caption)}</div>` : '';
-        const tags = (Array.isArray(row.hashtags)?row.hashtags:[])
-          .join(' ')
-          .replace(/\s+/g,' ')
-          .trim();
-
-        el.innerHTML = `
-          <div class="row" style="justify-content:space-between;align-items:center">
-            <strong>#${idx+1}</strong>
-            <div class="row">
-              <button class="btn small copy-cap">Copy Caption</button>
-              <button class="btn small copy-hash">Copy Hashtags</button>
-            </div>
-          </div>
-          ${cap}
-          <div class="hashtags">${escapeHtml(tags)}</div>
-        `;
-        el.querySelector('.copy-cap').addEventListener('click', ()=> navigator.clipboard.writeText(row.caption||''));
-        el.querySelector('.copy-hash').addEventListener('click', ()=> navigator.clipboard.writeText(tags||''));
-        frag.appendChild(el);
-      });
-      grid.appendChild(frag);
-      $('#meta').textContent = `${list.length} ${mode==='hashtags'?'hashtag sets':'caption set(s)'} generated`;
-    }
-
-    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-
-    // CSV export
-    function exportCsv(){
-      const rows = Array.from(document.querySelectorAll('.result')).map(el=>{
-        const t = el.querySelector('.caption')?.textContent?.trim()||'';
-        const h = el.querySelector('.hashtags')?.textContent?.trim()||'';
-        return { caption:t, hashtags:h };
-      });
-      const csv = 'caption,hashtags\n' + rows.map(r=> `"${(r.caption||'').replace(/"/g,'""')}","${(r.hashtags||'').replace(/"/g,'""')}"`).join('\n');
-      const blob = new Blob([csv], {type:'text/csv'});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `captions_${new Date().toISOString().slice(0,10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    }
-
-    // Shuffle (client-side reorder)
-    function shuffle(){
-      const grid = $('#grid');
-      const cards = Array.from(grid.children);
-      for (let i = cards.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        grid.insertBefore(cards[j], cards[i]);
-      }
-    }
-
-    // Actions
-    $('#exportCsv').addEventListener('click', exportCsv);
-    $('#shuffle').addEventListener('click', shuffle);
-    $('#copyAll').addEventListener('click', ()=>{
-      const caps = Array.from(document.querySelectorAll('.caption')).map(n=>n.textContent.trim()).filter(Boolean);
-      const tags = Array.from(document.querySelectorAll('.hashtags')).map(n=>n.textContent.trim()).filter(Boolean);
-      const out = caps.map((c,i)=> c + (tags[i]?('\n'+tags[i]):'')).join('\n\n');
-      navigator.clipboard.writeText(out||'');
-      $('#status').textContent = `Copied ${caps.length || tags.length} items to clipboard.`;
-    });
-
-    $('#generate').addEventListener('click', async ()=>{
-      const payload = buildPayload();
-      $('#status').textContent = 'Thinking…';
+      setStatus('Thinking…');
       try{
-        const res = await fetch('/api/generate-captions', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(payload)
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error || 'Error');
-        render(json, payload.mode);
-        $('#status').textContent = json.notes ? `Done — ${json.notes}` : 'Done.';
+        const data = await runGenerator(payload);
+        renderCaptions(data.captions || []);
+        renderTags((data.hashtags || []).map(h=>h.replace(/^#/,'').trim()));
+        setStatus('Done');
       }catch(e){
-        $('#status').textContent = 'Error generating. Check API key or try again.';
-        console.error(e);
+        setStatus('Error');
+        alert(e.message);
       }
-    });
+    }
+
+    function copyAll(){
+      const caps = Array.from(captionsList.querySelectorAll('li')).map(li=>li.textContent.trim());
+      const tags = Array.from(tagsList.querySelectorAll('.pill')).map(p=>p.textContent.trim());
+      const out = `Captions:\n- ${caps.join('\n- ')}\n\nHashtags:\n${tags.join(' ')}`;
+      navigator.clipboard.writeText(out).catch(()=>{});
+    }
+
+    function shuffle(){
+      // naive reshuffle: just re-run with same payload to get variations
+      generate();
+    }
+
+    document.getElementById('generate').addEventListener('click', generate);
+    document.getElementById('copyAll').addEventListener('click', copyAll);
+    document.getElementById('shuffle').addEventListener('click', shuffle);
+
+    // initial demo fill (optional)
+    product.value='Ceramide Barrier Serum';
+    audience.value='oily skin; sensitive';
+    benefits.value='barrier repair; glass skin; makeup holds';
+    pains.value='redness; breakouts';
   </script>
 </body>
 </html>
