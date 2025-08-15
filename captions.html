@@ -223,270 +223,396 @@
     © <span id="y"></span> FYP Insights Pro — Caption Catalyst
   </footer>
 
-  <script>
-    const THEME_KEY = 'theme';
-    const STATE_KEY = 'CAPTION_CATALYST_STATE_V1';
-    const API_URL = '/api/generate-captions-edge'; // <— FORCE EDGE
+    <script>
+  // ========= HARDENED BOOTSTRAP =========
+  (function(){
+    // Show any runtime error in the status bar so we don't get "nothing happens"
+    window.addEventListener('error', (e)=>{
+      const s = document.getElementById('status');
+      if (s){ s.textContent = 'Script error: ' + (e?.message || 'unknown'); s.style.display='block'; }
+    });
+  })();
 
-    function setTheme(mode){
-      document.documentElement.setAttribute('data-theme', mode === 'light' ? 'light' : 'dark');
-      localStorage.setItem(THEME_KEY, mode);
-      const btn = document.getElementById('themeBtn');
-      if (btn) btn.textContent = mode === 'light' ? '☀️' : '🌙';
-    }
-    (function initTheme(){
-      setTheme(localStorage.getItem(THEME_KEY) || 'dark');
-      const btn = document.getElementById('themeBtn');
-      if (btn) btn.addEventListener('click', ()=>{
-        const cur = localStorage.getItem(THEME_KEY) || 'dark';
-        setTheme(cur === 'dark' ? 'light' : 'dark');
-      });
-    })();
+  // ====================== CONFIG ======================
+  const THEME_KEY = 'theme';
+  const STATE_KEY = 'CAPTION_CATALYST_STATE_V1';
+  const API_URL   = '/api/generate-captions-edge'; // <- Edge route we created
 
-    (function initMenu(){
-      const tools = document.getElementById('tools');
-      const toolsBtn = document.getElementById('toolsBtn');
-      if (!tools || !toolsBtn) return;
-      function close(){ tools.classList.remove('open'); toolsBtn.setAttribute('aria-expanded','false'); }
-      function open(){ tools.classList.add('open'); toolsBtn.setAttribute('aria-expanded','true'); }
-      toolsBtn.addEventListener('click', (e)=>{ e.stopPropagation(); (tools.classList.contains('open')?close():open()); });
-      document.addEventListener('click', (e)=>{ if (!tools.contains(e.target)) close(); });
-      document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') close(); });
-    })();
+  // =================== THEME (same as index) ===================
+  function setTheme(mode){
+    document.documentElement.setAttribute('data-theme', mode === 'light' ? 'light' : 'dark');
+    localStorage.setItem(THEME_KEY, mode);
+    const btn = document.getElementById('themeBtn');
+    if (btn) btn.textContent = mode === 'light' ? '☀️' : '🌙';
+  }
+  function initTheme(){
+    setTheme(localStorage.getItem(THEME_KEY) || 'dark');
+    const btn = document.getElementById('themeBtn');
+    if (btn) btn.addEventListener('click', ()=>{
+      const cur = localStorage.getItem(THEME_KEY) || 'dark';
+      setTheme(cur === 'dark' ? 'light' : 'dark');
+    });
+  }
 
-    const $ = (q)=>document.querySelector(q);
-    const $$ = (q)=>Array.from(document.querySelectorAll(q));
-    const strip = (s)=> (s||'').toString().replace(/\s+/g,' ').trim();
-    const splitSemi = (s)=> strip(s).split(/\s*;\s*/).filter(Boolean);
-    const todaySeed = ()=> new Date().toISOString().slice(0,10);
-    const copy = async (txt)=>{ try{ await navigator.clipboard.writeText(txt) }catch{} };
+  // =================== TOOLS MENU ===================
+  function initMenu(){
+    const tools = document.getElementById('tools');
+    const toolsBtn = document.getElementById('toolsBtn');
+    if (!tools || !toolsBtn) return;
+    function close(){ tools.classList.remove('open'); toolsBtn.setAttribute('aria-expanded','false'); }
+    function open(){ tools.classList.add('open'); toolsBtn.setAttribute('aria-expanded','true'); }
+    toolsBtn.addEventListener('click', (e)=>{ e.stopPropagation(); (tools.classList.contains('open')?close():open()); });
+    document.addEventListener('click', (e)=>{ if (!tools.contains(e.target)) close(); });
+    document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') close(); });
+  }
 
-    const els = {
-      product:  $('#product'),
-      category: $('#category'),
-      audience: $('#audience'),
-      goal:     $('#goal'),
-      pains:    $('#pains'),
-      benefits: $('#benefits'),
-      tone:     $('#tone'),
-      length:   $('#length'),
-      emoji:    $('#emoji'),
-      strategy: $('#strategy'),
-      hashCount:$('#hashCount'),
-      count:    $('#count'),
-      list:     $('#list'),
-      kLen:     $('#kLen'),
-      kHash:    $('#kHash'),
-      kVar:     $('#kVar'),
-      status:   $('#status'),
+  // =================== DOM SHORTCUTS ===================
+  const $  = (q)=>document.querySelector(q);
+  const $$ = (q)=>Array.from(document.querySelectorAll(q));
+  const strip = (s)=> (s||'').toString().replace(/\s+/g,' ').trim();
+  const splitSemi = (s)=> strip(s).split(/\s*;\s*/).filter(Boolean);
+  const todaySeed = ()=> new Date().toISOString().slice(0,10);
+  const copy = async (txt)=>{ try{ await navigator.clipboard.writeText(txt) }catch{} };
+
+  // =================== DEFAULTS (unchanged) ===================
+  const defaultsByCategory = {
+    beauty:{ pains:['wasting money on serums','red irritated skin'], benefits:['glass-skin in 7 days','barrier-safe glow'], seed:['skincare','serum'] },
+    skincare:{ pains:['acne flares','10-step routines'], benefits:['derm-approved minimal routine'], seed:['skin','glow'] },
+    kitchen:{ pains:['spending forever prepping','slippery cutting board'], benefits:['5-min meal prep','one tool replaces 7'], seed:['kitchen','mealprep','cook'] },
+    cleaning:{ pains:['streaky mirrors','scrub for 30 minutes'], benefits:['spotless in one pass','zero streaks'], seed:['cleaning','home'] },
+    gadgets:{ pains:['dead battery by noon','cables everywhere'], benefits:['all-day battery','one cable'], seed:['tech','gadgets'] },
+    home:{ pains:['cluttered counters','no storage'], benefits:['renter-friendly storage'], seed:['home','organize'] },
+    fitness:{ pains:['burnout','plateaus'], benefits:['10-min routines','visible progress'], seed:['fitness','workout'] },
+    fashion:{ pains:['fits that don’t flatter'], benefits:['tailored look under $50'], seed:['fashion','outfit'] },
+    pets:{ pains:['fur on everything'], benefits:['hair-free couch'], seed:['pets','dog'] },
+  };
+
+  // Templates / CTAs / Emoji / Hashtag seeds (unchanged)
+  const CAP_TPL = [
+    "{toneLead}{benefit} without the {pain}. {product} just fixed it.",
+    "{toneLead}The fastest path to {benefit}? Start with {product}.",
+    "{toneLead}{audience}: if {pain} is your reality, this is your shortcut.",
+    "{toneLead}Proof over hype — watch how {product} delivers {benefit}.",
+    "{toneLead}I stopped {pain}. {product} in, {benefit} out.",
+    "{toneLead}New rule: one change → {benefit}. (It’s {product}.)",
+    "{toneLead}Real talk: {benefit} is easy when you remove {pain}.",
+    "{toneLead}{goalTitle} mode: do this first. {product} → {benefit}.",
+    "{toneLead}Before vs after with {product}. Unfiltered {benefit}.",
+    "{toneLead}If you want {benefit}, start here → {product}."
+  ];
+  const TONE_LEADS = {
+    bold:"Hot take: ",
+    friendly:"Real talk: ",
+    luxury:"Insider tip: ",
+    scientific:"Backed by data: ",
+    contrarian:"Unpopular opinion: ",
+    playful:"Low effort, high win: ",
+  };
+  const CTAS = {
+    clicks: ["Tap to see how it works →", "Link in bio — details inside.", "Want the breakdown? Tap through."],
+    "add to cart": ["Grab it while it’s in stock →", "Add to cart before price jumps.", "Don’t wait — check it out now."],
+    "brand awareness": ["Follow for more real tests.", "Save this for later.", "Share with a friend who needs this."],
+    comments: ["Comment ‘guide’ and I’ll DM the steps.", "What should I test next? Drop it.", "Tried this? Tell me your results."],
+    follows: ["Follow for daily shortcuts.", "More like this every day — follow.", "New tests weekly — hit follow."]
+  };
+  const EMOJI_PACK = {
+    none: [], smart: ["⚡️","✅","🧪","🔥","🎯","⏱️","💡","🔒","📦","✨"],
+    high: ["🔥","💥","✨","😍","🤯","⚡️","🚀","💡","🧪","🛒","🎯"]
+  };
+  const BROAD_SEEDS = ["tiktokmademebuyit","fyp","viral","tiktokshop","musthave"];
+  const MID_SEEDS   = ["lifehack","unboxing","review","beforeafter","asmr"];
+  const CAT_SEEDS   = {
+    beauty:["skincare","glowup","acnetips","skinbarrier"],
+    skincare:["skincare","barrierrepair","dermtips"],
+    kitchen:["kitchen","mealprep","kitchenhacks","homecooking"],
+    cleaning:["cleaningtips","cleantok","deepclean","cleaninghacks"],
+    gadgets:["gadgets","tech","techtok","setup"],
+    home:["homedecor","organize","apartment"],
+    fitness:["fitness","workout","homeworkout","fitnesstips"],
+    fashion:["fashion","outfit","ootd","capsulewardrobe"],
+    pets:["pettok","dogsoftiktok","catsoftiktok","petparents"]
+  };
+
+  // =================== STATE ===================
+  const els = {};
+  function cacheEls(){
+    els.product  = $('#product');
+    els.category = $('#category');
+    els.audience = $('#audience');
+    els.goal     = $('#goal');
+    els.pains    = $('#pains');
+    els.benefits = $('#benefits');
+    els.tone     = $('#tone');
+    els.length   = $('#length');
+    els.emoji    = $('#emoji');
+    els.strategy = $('#strategy');
+    els.hashCount= $('#hashCount');
+    els.list     = $('#list');
+    els.kLen     = $('#kLen');
+    els.kHash    = $('#kHash');
+    els.kVar     = $('#kVar');
+    els.status   = $('#status');
+    els.generate = document.getElementById('generate');
+    els.copyAll  = document.getElementById('copyAll');
+    els.exportCsv= document.getElementById('exportCsv');
+  }
+
+  function saveState(){
+    const s = {
+      product: els.product.value, category: els.category.value, audience: els.audience.value, goal: els.goal.value,
+      pains: els.pains.value, benefits: els.benefits.value, tone: els.tone.value, length: els.length.value,
+      emoji: els.emoji.value, strategy: els.strategy.value, hashCount: els.hashCount.value
     };
+    localStorage.setItem(STATE_KEY, JSON.stringify(s));
+  }
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STATE_KEY); if (!raw) return;
+      const s = JSON.parse(raw);
+      els.product.value = s.product||''; els.category.value=s.category||''; els.audience.value=s.audience||'';
+      els.goal.value=s.goal||'clicks'; els.pains.value=s.pains||''; els.benefits.value=s.benefits||'';
+      els.tone.value=s.tone||'bold'; els.length.value=s.length||'medium'; els.emoji.value=s.emoji||'smart';
+      els.strategy.value=s.strategy||'balanced'; els.hashCount.value=s.hashCount||'8';
+    }catch{}
+  }
 
-    function saveState(){
-      const s = {
-        product: els.product.value, category: els.category.value, audience: els.audience.value, goal: els.goal.value,
-        pains: els.pains.value, benefits: els.benefits.value, tone: els.tone.value, length: els.length.value,
-        emoji: els.emoji.value, strategy: els.strategy.value, hashCount: els.hashCount.value, count: els.count?.value || '12'
-      };
-      localStorage.setItem(STATE_KEY, JSON.stringify(s));
+  // =================== HELPERS ===================
+  function sample(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function clampLen(t, mode){
+    if (mode==='short' && t.length>80) return t.split(' ').slice(0,12).join(' ') + '…';
+    if (mode==='long'  && t.length<80) return t + ' — here’s why.';
+    return t;
+  }
+  function injectEmoji(t, pack, intensity){
+    if (!pack.length || intensity==='none') return t;
+    const pick = ()=> sample(pack);
+    if (intensity==='smart'){ if (Math.random()<0.7) t = t + ' ' + pick(); if (Math.random()<0.35) t = pick() + ' ' + t; }
+    else { t = pick() + ' ' + t + ' ' + pick(); }
+    return t;
+  }
+  function slugifyHash(s){ return strip(s.toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,'')); }
+
+  function makeHashtags({product, category, audience, benefitsPool, painsPool, strategy, hashCount}){
+    const n = parseInt(hashCount,10) || 8;
+    const broad = [...BROAD_SEEDS], mid=[...MID_SEEDS], cset=CAT_SEEDS[category]||[];
+    const terms = []
+      .concat((product||'').split(/\W+/))
+      .concat((audience||'').split(/\W+/))
+      .concat(benefitsPool||[])
+      .concat(painsPool||[])
+      .map(slugifyHash).filter(x=> x && x.length>2 && x.length<28);
+    const niche = new Set();
+    terms.forEach(t=>{ niche.add(t); if (Math.random()<0.35) niche.add(t+(Math.random()<0.5?'tips':'hack')); });
+    function take(arr,k){ const out=[]; const pool=[...arr]; for(let i=0;i<k&&pool.length;i++){ out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]); } return out; }
+    let picks = [];
+    if (strategy==='niche-heavy'){
+      picks = take([...niche], Math.ceil(n*0.6)).concat(take(cset, Math.ceil(n*0.2)), take(mid, Math.ceil(n*0.1)), take(broad, Math.ceil(n*0.1)));
+    } else if (strategy==='broad-heavy'){
+      picks = take(broad, Math.ceil(n*0.4)).concat(take(mid, Math.ceil(n*0.25)), take(cset, Math.ceil(n*0.2)), take([...niche], Math.ceil(n*0.15)));
+    } else if (strategy==='branded'){
+      const branded = slugifyHash(product||'brand');
+      picks = [branded].concat(take(broad, Math.ceil((n-1)*0.35)), take(mid, Math.ceil((n-1)*0.25)), take(cset, Math.ceil((n-1)*0.2)), take([...niche], Math.ceil((n-1)*0.2)));
+    } else {
+      picks = take(broad, Math.ceil(n*0.25)).concat(take(mid, Math.ceil(n*0.25)), take(cset, Math.ceil(n*0.25)), take([...niche], Math.ceil(n*0.25)));
     }
-    function loadState(){
-      try{
-        const raw = localStorage.getItem(STATE_KEY); if (!raw) return;
-        const s = JSON.parse(raw);
-        els.product.value = s.product||''; els.category.value=s.category||''; els.audience.value=s.audience||'';
-        els.goal.value=s.goal||'clicks'; els.pains.value=s.pains||''; els.benefits.value=s.benefits||'';
-        els.tone.value=s.tone||'bold'; els.length.value=s.length||'medium'; els.emoji.value=s.emoji||'smart';
-        els.strategy.value=s.strategy||'balanced'; els.hashCount.value=s.hashCount||'8';
-      }catch{}
+    const unique=[], seen=new Set();
+    picks.forEach(h=>{ const w=slugifyHash(h); if (!w||seen.has(w)) return; seen.add(w); unique.push('#'+w); });
+    return unique.slice(0,n);
+  }
+
+  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+  function escAttr(s){ return (s||'').replace(/"/g,'&quot;'); }
+  function decodeAttr(s){ const d=document.createElement('div'); d.innerHTML=s; return d.textContent||''; }
+  function flash(msg){ els.status.textContent = msg; els.status.style.display='block'; clearTimeout(flash._t); flash._t=setTimeout(()=> els.status.style.display='none', 1500); }
+
+  function render(list, preferCombined){
+    const host = els.list; host.innerHTML = '';
+    if (preferCombined && list.length){
+      const first = list[0];
+      const full = (first.combined || (first.caption + (first.hashtags?.length ? '\n'+first.hashtags.join(' ') : ''))).trim();
+      const one = document.createElement('div');
+      one.className = 'cap';
+      one.innerHTML = `
+        <div class="meta"><div class="tag">Paste-ready</div><div class="small muted">${full.length} chars</div></div>
+        <div class="body">${escapeHtml(full)}</div>
+      <div class="actions"><button class="copy" data-payload="${escAttr(full)}">Copy line</button></div>`;
+      host.appendChild(one);
     }
-    loadState();
-    $$('#product, #category, #audience, #goal, #pains, #benefits, #tone, #length, #emoji, #strategy, #hashCount').forEach(n=>{
-      n.addEventListener('input', saveState); n.addEventListener('change', saveState);
+    list.forEach((it, i)=>{
+      if (preferCombined && i===0) return;
+      const cap = it.caption || it.combined || '';
+      const tags = (it.hashtags || []).join(' ');
+      const box = document.createElement('div');
+      box.className = 'cap';
+      box.innerHTML = `
+        <div class="meta">
+          <div class="tag">Option ${preferCombined ? i : i+1}</div>
+          <div class="small muted">${cap.length} chars • ${it.hashtags?.length || 0} tags</div>
+        </div>
+        <div class="body">${escapeHtml(cap)}</div>
+        ${tags ? `<div class="body" style="margin-top:6px;color:var(--muted)">${escapeHtml(tags)}</div>`:''}
+        <div class="actions">
+          <button class="copy" data-payload="${escAttr(cap)}">Copy caption</button>
+          ${tags ? `<button class="copy" data-payload="${escAttr(tags)}">Copy hashtags</button>`:''}
+          ${tags ? `<button class="copy" data-payload="${escAttr(cap+'\n'+tags)}">Copy both</button>`:''}
+        </div>`;
+      host.appendChild(box);
     });
+    const capsOnly = list.map(x => x.caption || x.combined || '');
+    const avgLen = Math.round(capsOnly.reduce((a,c)=>a+(c?.length||0),0) / Math.max(1,capsOnly.length));
+    els.kVar.textContent = String(list.length);
+    els.kLen.textContent = isFinite(avgLen)? `${avgLen} avg` : '—';
+    els.kHash.textContent = list[0]?.hashtags?.length || '—';
 
-    // Local fallback hashtag helper (kept short)
-    function slugify(s){ return strip(s.toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,'')); }
-    function fallbackHashtags({product, category, audience, benefits, pains, n=8}){
-      const base = ['fyp','tiktokshop','tiktokmademebuyit'];
-      const cat = {
-        beauty:['skincare','glowup','skinbarrier'],
-        kitchen:['kitchen','mealprep','kitchenhacks'],
-        cleaning:['cleantok','cleaningtips','deepclean'],
-        gadgets:['gadgets','techtok','setup'],
-        pets:['pettok','backyardchickens','petparents']
-      }[category] || [];
-      const parts = (product+' '+audience+' '+benefits.join(' ')+' '+pains.join(' ')).split(/\W+/).map(slugify).filter(x=>x && x.length>2);
-      const niche = Array.from(new Set(parts)).slice(0, 20);
-      const picks = new Set();
-      base.forEach(b => picks.add('#'+b));
-      cat.forEach(c => { if (picks.size<n) picks.add('#'+c); });
-      niche.forEach(t => { if (picks.size<n) picks.add('#'+t); });
-      return Array.from(picks).slice(0,n);
+    host.querySelectorAll('.copy').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const payload = decodeAttr(btn.getAttribute('data-payload')||'');
+        navigator.clipboard.writeText(payload).then(()=> flash('Copied ✅'));
+      });
+    });
+  }
+
+  // ========== API ==========
+  async function callAI(vars){
+    const res = await fetch(API_URL, {
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body: JSON.stringify({
+        product: vars.product,
+        audience: vars.audience,
+        benefits: vars.benefits,
+        pains: vars.pains,
+        tone: vars.tone,
+        length: vars.length,
+        platform: 'tiktok',
+        count: 6,
+        hashCount: parseInt(vars.hashCount,10)||8
+      })
+    });
+    if (!res.ok){
+      const txt = await res.text().catch(()=>res.statusText);
+      throw new Error(`API ${res.status}: ${txt}`);
     }
+    return res.json();
+  }
 
-    function render(list, preferCombined){
-      const host = els.list; host.innerHTML = '';
+  // ========== CORE FLOW ==========
+  function readVars(){
+    const product = strip(els.product.value);
+    const category = strip(els.category.value);
+    const audience = strip(els.audience.value);
+    const goal = strip(els.goal.value||'clicks');
+    const pains = splitSemi(els.pains.value);
+    const benefits = splitSemi(els.benefits.value);
+    return {
+      product, category, audience, goal, pains, benefits,
+      tone: els.tone.value, length: els.length.value, emoji: els.emoji.value,
+      strategy: els.strategy.value, hashCount: els.hashCount.value
+    };
+  }
 
-      if (preferCombined && list.length){
-        const first = list[0];
-        const full = (first.combined || (first.caption + (first.hashtags?.length ? '\n'+first.hashtags.join(' ') : ''))).trim();
-        const one = document.createElement('div');
-        one.className = 'cap';
-        one.innerHTML = `
-          <div class="meta">
-            <div class="tag">Paste-ready</div>
-            <div class="small muted">${full.length} chars</div>
-          </div>
-          <div class="body">${escapeHtml(full)}</div>
-          <div class="actions"><button class="copy" data-payload="${escAttr(full)}">Copy line</button></div>`;
-        host.appendChild(one);
+  function fallbackHashtags({product, category, audience, benefits, pains, n=8}){
+    const base = ['fyp','tiktokshop','tiktokmademebuyit'];
+    const cat = {
+      beauty:['skincare','glowup','skinbarrier'],
+      kitchen:['kitchen','mealprep','kitchenhacks'],
+      cleaning:['cleantok','cleaningtips','deepclean'],
+      gadgets:['gadgets','techtok','setup'],
+      pets:['pettok','backyardchickens','petparents']
+    }[category] || [];
+    const slug = s => strip(s.toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,''));
+    const parts = (product+' '+audience+' '+benefits.join(' ')+' '+pains.join(' ')).split(/\W+/).map(slug).filter(x=>x && x.length>2);
+    const niche = Array.from(new Set(parts)).slice(0, 20);
+    const picks = new Set();
+    base.forEach(b => picks.add('#'+b)); cat.forEach(c => { if (picks.size<n) picks.add('#'+c); });
+    niche.forEach(t => { if (picks.size<n) picks.add('#'+t); });
+    return Array.from(picks).slice(0,n);
+  }
+
+  async function build(){
+    const vars = readVars();
+    els.status.textContent = 'Thinking…';
+    els.status.style.display = 'block';
+
+    try{
+      const data = await callAI(vars);
+      const tagsLine = (data.hashtags || []).map(h => h.startsWith('#') ? h : '#'+h);
+      const list = [];
+      if (data.combined){ list.push({ combined: data.combined, caption: data.combined, hashtags: [] }); }
+      if (Array.isArray(data.captions) && data.captions.length){
+        data.captions.slice(0,2).forEach(c => list.push({ caption: c, hashtags: tagsLine }));
       }
-
-      list.forEach((it, i)=>{
-        if (preferCombined && i===0) return;
-        const cap = it.caption || it.combined || '';
-        const tags = (it.hashtags || []).join(' ');
-        const box = document.createElement('div');
-        box.className = 'cap';
-        box.innerHTML = `
-          <div class="meta">
-            <div class="tag">Option ${preferCombined ? i : i+1}</div>
-            <div class="small muted">${cap.length} chars • ${it.hashtags?.length || 0} tags</div>
-          </div>
-          <div class="body">${escapeHtml(cap)}</div>
-          ${tags ? `<div class="body" style="margin-top:6px;color:var(--muted)">${escapeHtml(tags)}</div>`:''}
-          <div class="actions">
-            <button class="copy" data-payload="${escAttr(cap)}">Copy caption</button>
-            ${tags ? `<button class="copy" data-payload="${escAttr(tags)}">Copy hashtags</button>`:''}
-            ${tags ? `<button class="copy" data-payload="${escAttr(cap+'\n'+tags)}">Copy both</button>`:''}
-          </div>`;
-        host.appendChild(box);
-      });
-
-      const capsOnly = list.map(x => x.caption || x.combined || '');
-      const avgLen = Math.round(capsOnly.reduce((a,c)=>a+(c?.length||0),0) / Math.max(1,capsOnly.length));
-      els.kVar.textContent = String(list.length);
-      els.kLen.textContent = isFinite(avgLen)? `${avgLen} avg` : '—';
-      els.kHash.textContent = list[0]?.hashtags?.length || '—';
-
-      host.querySelectorAll('.copy').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          const payload = decodeAttr(btn.getAttribute('data-payload')||'');
-          navigator.clipboard.writeText(payload).then(()=> flash('Copied ✅'));
-        });
-      });
-    }
-
-    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
-    function escAttr(s){ return (s||'').replace(/"/g,'&quot;'); }
-    function decodeAttr(s){ const d=document.createElement('div'); d.innerHTML=s; return d.textContent||''; }
-    function flash(msg){ els.status.textContent = msg; els.status.style.display='block'; clearTimeout(flash._t); flash._t=setTimeout(()=> els.status.style.display='none', 1500); }
-
-    async function callAI(vars){
-      const res = await fetch(API_URL, {
-        method:'POST',
-        headers:{'content-type':'application/json'},
-        body: JSON.stringify({
-          product: vars.product,
-          audience: vars.audience,
-          benefits: vars.benefits,
-          pains: vars.pains,
-          tone: vars.tone,
-          length: vars.length,
-          platform: 'tiktok',
-          count: 6,
-          hashCount: parseInt(vars.hashCount,10)||8
-        })
-      });
-      if (!res.ok){
-        const txt = await res.text().catch(()=>res.statusText);
-        throw new Error(`API ${res.status}: ${txt}`);
-      }
-      return res.json(); // { combined, captions[], hashtags[] }
-    }
-
-    function readVars(){
-      const product = strip(els.product.value);
-      const category = strip(els.category.value);
-      const audience = strip(els.audience.value);
-      const goal = strip(els.goal.value||'clicks');
-      const pains = splitSemi(els.pains.value);
-      const benefits = splitSemi(els.benefits.value);
-      return {
-        product, category, audience, goal, pains, benefits,
-        tone: els.tone.value, length: els.length.value, emoji: els.emoji.value,
-        strategy: els.strategy.value, hashCount: els.hashCount.value
-      };
-    }
-
-    async function build(){
-      const vars = readVars();
-      els.status.textContent = 'Thinking…';
-      els.status.style.display = 'block';
-
-      try{
-        const data = await callAI(vars);
-        const tagsLine = (data.hashtags || []).map(h => h.startsWith('#') ? h : '#'+h);
-        const list = [];
-
-        if (data.combined){
-          list.push({ combined: data.combined, caption: data.combined, hashtags: [] });
-        }
-        if (Array.isArray(data.captions) && data.captions.length){
-          data.captions.slice(0,2).forEach(c => list.push({ caption: c, hashtags: tagsLine }));
-        }
-        if (!list.length){
-          // fill with something
-          const fh = fallbackHashtags(vars);
-          list.push({ caption: 'Paste any caption here then add:', hashtags: fh });
-        }
-        render(list, true);
-        flash('Generated ✅');
-      }catch(e){
-        console.warn('AI failed, showing fallback:', e);
+      if (!list.length){
         const fh = fallbackHashtags(vars);
-        render([{ caption: 'AI unavailable — here is a fallback tag set:', hashtags: fh }], false);
-        flash('AI unavailable — fallback shown');
+        list.push({ caption: 'Paste any caption here then add:', hashtags: fh });
       }
+      render(list, true);
+      els.status.textContent = 'Generated ✅';
+    }catch(e){
+      console.warn('AI failed:', e);
+      const fh = fallbackHashtags(vars);
+      render([{ caption: 'AI unavailable — here is a fallback tag set:', hashtags: fh }], false);
+      els.status.textContent = 'AI unavailable — fallback shown';
+    }
+  }
+
+  // ========== SAFE INIT & LISTENERS ==========
+  document.addEventListener('DOMContentLoaded', ()=>{
+    cacheEls();
+    initTheme();
+    initMenu();
+
+    // Make sure the Generate button is a real button and clickable
+    if (els.generate){
+      els.generate.setAttribute('type','button');
+      els.generate.style.cursor = 'pointer';
+      els.generate.addEventListener('click', ()=>{ saveState(); build(); });
     }
 
-    document.getElementById('generate').addEventListener('click', build);
-    document.getElementById('copyAll').addEventListener('click', async ()=>{
-      const boxes = Array.from(document.querySelectorAll('.cap'));
-      const text = boxes.map(b=>{
-        const bodies = b.querySelectorAll('.body');
-        const t = bodies[0]?.textContent || '';
-        const h = bodies[1]?.textContent || '';
-        return h ? (t + '\n' + h).trim() : t.trim();
-      }).join('\n\n');
-      await copy(text);
-      flash(`Copied ${boxes.length} item(s) ✅`);
-    });
-    document.getElementById('exportCsv').addEventListener('click', async ()=>{
-      const boxes = Array.from(document.querySelectorAll('.cap'));
-      const rows = boxes.map(b=>{
-        const bodies = b.querySelectorAll('.body');
-        const t = bodies[0]?.textContent || '';
-        const h = bodies[1]?.textContent || '';
-        return {caption:t, hashtags:h};
+    if (els.copyAll){
+      els.copyAll.setAttribute('type','button');
+      els.copyAll.addEventListener('click', async ()=>{
+        const boxes = Array.from(document.querySelectorAll('.cap'));
+        const text = boxes.map(b=>{
+          const bodies = b.querySelectorAll('.body');
+          const t = bodies[0]?.textContent || '';
+          const h = bodies[1]?.textContent || '';
+          return h ? (t + '\n' + h).trim() : t.trim();
+        }).join('\n\n');
+        await copy(text); flash(`Copied ${boxes.length} item(s) ✅`);
       });
-      const esc = s=> `"${String(s).replace(/"/g,'""')}"`;
-      const csv = 'idx,caption,hashtags\n' + rows.map((r,i)=> [i+1, esc(r.caption), esc(r.hashtags)].join(',')).join('\n');
-      const blob = new Blob([csv], {type:'text/csv'});
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `captions_${todaySeed()}.csv`; a.click();
-      URL.revokeObjectURL(a.href);
-      flash('Exported CSV ✅');
-    });
+    }
 
-    (async function init(){
-      if (!els.product.value) els.product.value = '14-in-1 Veggie Chopper';
-      if (!els.category.value) els.category.value = 'kitchen';
-      if (!els.audience.value) els.audience.value = 'busy parents';
-      if (!els.pains.value) els.pains.value = 'spending forever chopping; cluttered counters';
-      if (!els.benefits.value) els.benefits.value = '5-minute meal prep; one tool replaces 7';
-      saveState();
-      document.getElementById('y').textContent = new Date().getFullYear();
-    })();
-  </script>
+    if (els.exportCsv){
+      els.exportCsv.setAttribute('type','button');
+      els.exportCsv.addEventListener('click', async ()=>{
+        const boxes = Array.from(document.querySelectorAll('.cap'));
+        const rows = boxes.map(b=>{
+          const bodies = b.querySelectorAll('.body');
+          const t = bodies[0]?.textContent || '';
+          const h = bodies[1]?.textContent || '';
+          return {caption:t, hashtags:h};
+        });
+        const esc = s=> `"${String(s).replace(/"/g,'""')}"`;
+        const csv = 'idx,caption,hashtags\n' + rows.map((r,i)=> [i+1, esc(r.caption), esc(r.hashtags)].join(',')).join('\n');
+        const blob = new Blob([csv], {type:'text/csv'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `captions_${todaySeed()}.csv`; a.click();
+        URL.revokeObjectURL(a.href);
+        flash('Exported CSV ✅');
+      });
+    }
+
+    // Pre-fill nice defaults and set footer year
+    if (!els.product.value) els.product.value = '14-in-1 Veggie Chopper';
+    if (!els.category.value) els.category.value = 'kitchen';
+    if (!els.audience.value) els.audience.value = 'busy parents';
+    if (!els.pains.value) els.pains.value = 'spending forever chopping; cluttered counters';
+    if (!els.benefits.value) els.benefits.value = '5-minute meal prep; one tool replaces 7';
+    saveState();
+    const y = document.getElementById('y'); if (y) y.textContent = new Date().getFullYear();
+  });
+</script>
+
 </body>
 </html>
+
