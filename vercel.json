@@ -5,8 +5,7 @@
     { "src": "^/captions$", "dest": "/captions.html" }
   ],
   "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs20.x"
-    }
+    "api/ping.js": { "runtime": "nodejs20.x" },
+    "api/generate-captions.js": { "runtime": "edge" }
   }
 }
