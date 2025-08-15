@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "framework": null,
+  "routes": [
+    { "src": "^/captions$", "dest": "/captions.html" }
+  ],
+  "functions": {
+    "api/generate-captions-edge.js": { "runtime": "edge" },
+    "api/generate-captions.js":      { "runtime": "nodejs20.x", "maxDuration": 20, "regions": ["iad1"] },
+    "api/ping.js":                   { "runtime": "nodejs20.x", "regions": ["iad1"] }
+  }
+}
